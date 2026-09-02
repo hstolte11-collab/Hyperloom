@@ -2760,19 +2760,6 @@ class TestCoerceRuntimeValue:
         assert krh._coerce_runtime_value(value) == expected
 
 
-class TestBackendOrder:
-    def test_kernel_opt_backends_alias_does_not_enable_forge(self, monkeypatch):
-        monkeypatch.delenv("KERNEL_OPT_BACKEND_ORDER", raising=False)
-        monkeypatch.delenv("CURSOR_API_KEY", raising=False)
-
-        assert krh._backend_order({}) == []
-
-    def test_kernel_opt_backends_alias_with_mixed_values_stays_geak_only(self, monkeypatch):
-        monkeypatch.delenv("KERNEL_OPT_BACKEND_ORDER", raising=False)
-
-        assert krh._backend_order({}) == []
-
-
 class TestCandidateEnvAllowed:
     @pytest.mark.parametrize("name", ["AWS_SECRET_ACCESS_KEY", "ANTHROPIC_API_KEY"])
     def test_sensitive_env_blocked(self, name):
@@ -2792,25 +2779,6 @@ class TestCandidateEnvAllowed:
         assert krh._candidate_env_allowed(sample) is True
 
 
-class TestRuntimeGeneratedKernel:
-    def test_runtime_generated_path_treats_as_generated(self):
-        markers = krh._RUNTIME_GENERATED_SOURCE_MARKERS
-        if not markers:
-            pytest.skip("no runtime markers in build")
-        marker = next(iter(markers))
-        assert krh._is_runtime_generated_kernel("kernel_agent", f"/tmp/{marker}_x.py") is True
-
-    def test_reusable_source_root_overrides_compile_marker(self):
-        markers = krh._COMPILE_GENERATED_NAME_MARKERS
-        roots = krh._reusable_source_roots()
-        if not markers or not roots:
-            pytest.skip("required tables empty in build")
-        marker = next(iter(markers))
-        reusable_root = next(iter(roots))
-        # Name matches but source lives under a reusable root -> False.
-        assert krh._is_runtime_generated_kernel(marker, f"{reusable_root}/foo.py") is False
-
-
 class TestSplitServerArgs:
     def test_empty_returns_empty(self):
         assert krh._split_server_args("") == []
@@ -2823,62 +2791,6 @@ class TestSplitServerArgs:
         # shlex.split raises ValueError on bad input; helper returns [].
         argv = krh._split_server_args('--foo "unterminated')
         assert argv == []
-
-
-class TestLoadCandidateMetadata:
-    def test_uses_inline_candidate(self):
-        out = krh._load_candidate_metadata({"candidate": {"kernel_id": "x"}})
-        assert out == {"kernel_id": "x"}
-
-    def test_returns_empty_when_no_kernel_id(self):
-        assert krh._load_candidate_metadata({}) == {}
-        assert krh._load_candidate_metadata({"candidates_path": "x"}) == {}
-
-    def test_reads_kernel_from_disk(self, tmp_path):
-        candidates = tmp_path / "hot.json"
-        candidates.write_text(
-            json.dumps(
-                {
-                    "hot_kernels": [
-                        {"kernel_id": "k0", "name": "first"},
-                        {"kernel_id": "k1", "name": "second"},
-                    ],
-                }
-            )
-        )
-        out = krh._load_candidate_metadata(
-            {
-                "candidates_path": str(candidates),
-                "kernel_id": "k1",
-            }
-        )
-        assert out["name"] == "second"
-
-    def test_returns_empty_on_missing_kernel(self, tmp_path):
-        candidates = tmp_path / "hot.json"
-        candidates.write_text(json.dumps({"hot_kernels": []}))
-        assert (
-            krh._load_candidate_metadata(
-                {
-                    "candidates_path": str(candidates),
-                    "kernel_id": "missing",
-                }
-            )
-            == {}
-        )
-
-    def test_returns_empty_on_bad_json(self, tmp_path):
-        candidates = tmp_path / "hot.json"
-        candidates.write_text("{not json")
-        assert (
-            krh._load_candidate_metadata(
-                {
-                    "candidates_path": str(candidates),
-                    "kernel_id": "x",
-                }
-            )
-            == {}
-        )
 
 
 class TestLoadMaterializedWorkloadMetadata:
@@ -2991,47 +2903,6 @@ class TestEnrichCandidate:
 
     def test_enrich_candidates_artifact_noop_when_missing_path(self):
         krh._enrich_candidates_artifact("", {"env_vars": {}}, trace_report_path="")
-
-
-class TestReusableSourceRootsAtom:
-    """atom layout prefixes participate in cross-task kernel reuse
-    alongside aiter/sglang/vllm."""
-
-    def test_includes_atom_editable_path(self):
-        # The matcher lowercases its source-file input, so the stored prefix is
-        # lowercase ``/app/atom/atom/``.
-        assert any("/app/atom/atom/" in r.lower() for r in krh._reusable_source_roots())
-
-    def test_includes_atom_site_packages_python_3_10(self):
-        assert any("/opt/venv/lib/python3.10/site-packages/atom/" in r for r in krh._reusable_source_roots())
-
-    def test_includes_atom_site_packages_python_3_12(self):
-        assert any("/opt/venv/lib/python3.12/site-packages/atom/" in r for r in krh._reusable_source_roots())
-
-    def test_atom_path_classified_as_reusable(self):
-        """An atom-owned kernel source under /app/ATOM/atom/ is NOT runtime-generated."""
-        markers = krh._COMPILE_GENERATED_NAME_MARKERS
-        if not markers:
-            pytest.skip("compile markers empty in build")
-        marker = next(iter(markers))
-        result = krh._is_runtime_generated_kernel(
-            marker,
-            "/app/ATOM/atom/model_engine/model_runner.py",
-        )
-        assert result is False
-
-    def test_non_framework_path_under_app_is_not_reusable(self):
-        """A non-atom path under /app/ must NOT match the atom reusable-source-root prefix."""
-        markers = krh._COMPILE_GENERATED_NAME_MARKERS
-        if not markers:
-            pytest.skip("compile markers empty in build")
-        marker = next(iter(markers))
-        # Under /app/ but not /app/ATOM/atom/ -> runtime-generated (not reusable).
-        result = krh._is_runtime_generated_kernel(
-            marker,
-            "/app/session_dir/runs/baseline/foo.py",
-        )
-        assert result is True
 
 
 class TestRunGemmTuningHandler:
@@ -5069,7 +4940,6 @@ class TestRunGemmTuningHandler:
         assert krh._resolve_forge_shapes(state, session_dir) == str(artifact)
 
 
-# _default_kernel_batch_parallel — adaptive batch fanout scaling with visible GPUs.
 class TestDefaultKernelBatchParallel:
     @pytest.fixture
     def patch_torch(self, monkeypatch):
@@ -5085,59 +4955,6 @@ class TestDefaultKernelBatchParallel:
 
         return _set
 
-    @pytest.mark.parametrize(
-        "n_gpus, per_task, expected",
-        [
-            # Full-node match: cap kicks in at 8.
-            (8, 1, 8),
-            # Partial node -> floor at the visible-GPU count.
-            (4, 1, 4),
-            # 8-GPU node with 4-GPU reservations -> 2 concurrent.
-            (8, 4, 2),
-            # 4-GPU pod with 2-GPU per task -> 2 concurrent.
-            (4, 2, 2),
-            # Larger-than-cap node -> cap still kicks in.
-            (16, 1, 8),
-            # Per-task larger than visible -> floor at 1.
-            (1, 4, 1),
-        ],
-    )
-    def test_scales_with_visible_gpus(
-        self,
-        patch_torch,
-        n_gpus,
-        per_task,
-        expected,
-    ):
-        patch_torch(n_gpus, per_task=per_task)
-        assert krh._default_kernel_batch_parallel() == expected
-
-    def test_per_task_unset_defaults_to_one(self, patch_torch):
-        patch_torch(4, per_task=None)
-        assert krh._default_kernel_batch_parallel() == 4
-
-    def test_per_task_invalid_falls_back_to_one(self, patch_torch):
-        patch_torch(4, per_task="not-an-int")
-        assert krh._default_kernel_batch_parallel() == 4
-
-    def test_zero_visible_gpus_returns_legacy_fallback(self, patch_torch):
-        patch_torch(0)
-        assert krh._default_kernel_batch_parallel() == krh._DEFAULT_KERNEL_BATCH_PARALLEL
-
-    def test_torch_failure_returns_legacy_fallback(self, monkeypatch):
-        torch = _ensure_torch_module(monkeypatch)
-
-        def _boom():
-            raise RuntimeError("driver init failed")
-
-        monkeypatch.setattr(torch.cuda, "device_count", _boom)
-        monkeypatch.delenv("KERNEL_AGENT_NUM_GPUS", raising=False)
-        assert krh._default_kernel_batch_parallel() == krh._DEFAULT_KERNEL_BATCH_PARALLEL
-
-
-# _should_parallelize_backends — backends never auto-parallelize; False unless
-# forced via payload ``parallel_backends`` or env ``KERNEL_OPT_PARALLEL_BACKENDS``.
-
 
 class TestShouldParallelizeBackends:
     @pytest.fixture
@@ -5151,91 +4968,8 @@ class TestShouldParallelizeBackends:
                 monkeypatch.delenv("KERNEL_AGENT_NUM_GPUS", raising=False)
             else:
                 monkeypatch.setenv("KERNEL_AGENT_NUM_GPUS", str(per_task))
-            monkeypatch.delenv("KERNEL_OPT_PARALLEL_BACKENDS", raising=False)
 
         return _set
-
-    @pytest.mark.parametrize(
-        "n_gpus, per_task, num_candidates",
-        [
-            # No auto-parallelize regardless of GPU count: without an explicit
-            # override the decision is always sequential (False).
-            (8, 1, 3),
-            (8, 1, 100),
-            (2, 1, 1),
-            (1, 1, 1),
-            (16, 8, 1),
-        ],
-    )
-    def test_no_auto_parallelize_without_override(
-        self,
-        patch_torch,
-        n_gpus,
-        per_task,
-        num_candidates,
-    ):
-        patch_torch(n_gpus, per_task=per_task)
-        assert krh._should_parallelize_backends({}, num_candidates) is False
-
-    def test_non_positive_candidates_is_false(self, patch_torch):
-        patch_torch(64, per_task=1)  # plenty of GPUs
-        assert krh._should_parallelize_backends({}, 0) is False
-        assert krh._should_parallelize_backends({}, -1) is False
-
-    def test_zero_visible_gpus_is_false(self, patch_torch):
-        patch_torch(0, per_task=1)
-        assert krh._should_parallelize_backends({}, 1) is False
-
-    def test_torch_unknown_is_false(self, monkeypatch):
-        torch = _ensure_torch_module(monkeypatch)
-
-        def _boom():
-            raise RuntimeError("driver init failed")
-
-        monkeypatch.setattr(torch.cuda, "device_count", _boom)
-        monkeypatch.delenv("KERNEL_OPT_PARALLEL_BACKENDS", raising=False)
-        assert krh._should_parallelize_backends({}, 1) is False
-
-    def test_payload_override_enables_below_threshold(self, patch_torch):
-        patch_torch(1, per_task=1)  # GPU-aware math is False (1 < 2*1)
-        assert (
-            krh._should_parallelize_backends(
-                {"parallel_backends": True},
-                5,
-            )
-            is True
-        )
-        assert (
-            krh._should_parallelize_backends(
-                {"parallel_backends": "on"},
-                5,
-            )
-            is True
-        )
-
-    def test_payload_override_disables_above_threshold(self, patch_torch):
-        patch_torch(64, per_task=1)  # GPU-aware math would say True
-        assert (
-            krh._should_parallelize_backends(
-                {"parallel_backends": False},
-                1,
-            )
-            is False
-        )
-        assert (
-            krh._should_parallelize_backends(
-                {"parallel_backends": "no"},
-                1,
-            )
-            is False
-        )
-
-    def test_env_override(self, patch_torch, monkeypatch):
-        patch_torch(1, per_task=1)  # GPU-aware math is False (1 < 2*1)
-        monkeypatch.setenv("KERNEL_OPT_PARALLEL_BACKENDS", "1")
-        assert krh._should_parallelize_backends({}, 5) is True
-        monkeypatch.setenv("KERNEL_OPT_PARALLEL_BACKENDS", "0")
-        assert krh._should_parallelize_backends({}, 1) is False
 
 
 class TestReconcileKernelId:
@@ -5243,29 +4977,6 @@ class TestReconcileKernelId:
         {"kernel_id": "k001", "name": "aten::mm"},
         {"kernel_id": "k010", "name": "aiter::rmsnorm"},
     ]
-
-    def test_exact_id_kept(self):
-        assert krh._reconcile_kernel_id("k010", self.CANDS) == "k010"
-
-    def test_name_match_kept(self):
-        # An exact operator-name match is canonicalized to the stable k00x id.
-        assert krh._reconcile_kernel_id("aten::mm", self.CANDS) == "k001"
-
-    def test_normalized_prefix_resolves_to_real_id(self):
-        assert krh._reconcile_kernel_id("kn001", self.CANDS) == "k001"
-        assert krh._reconcile_kernel_id("rn010", self.CANDS) == "k010"
-
-    def test_missing_id_falls_back_to_first(self):
-        assert krh._reconcile_kernel_id("", self.CANDS) == "k001"
-        assert krh._reconcile_kernel_id(None, self.CANDS) == "k001"
-
-    def test_hallucinated_id_is_left_for_guard_or_cli_skip(self):
-        # Non-empty ids are never guessed; a pure hallucination is left untouched.
-        assert krh._reconcile_kernel_id("aiter.silu_and_mul", self.CANDS) == "aiter.silu_and_mul"
-        assert (
-            krh._reconcile_kernel_id("framework_sglang_silu_and_mul_m64", self.CANDS)
-            == "framework_sglang_silu_and_mul_m64"
-        )
 
 
 class TestReconcileKernelIdForSingleBatch:
@@ -5277,16 +4988,6 @@ class TestReconcileKernelIdForSingleBatch:
         },
     ]
 
-    def test_pins_mismatched_id_to_sole_candidate(self):
-        kid, pinned = krh._reconcile_kernel_id_for_single_batch("k003", self.CANDS)
-        assert kid == "k002"
-        assert pinned is True
-
-    def test_keeps_exact_match(self):
-        kid, pinned = krh._reconcile_kernel_id_for_single_batch("k002", self.CANDS)
-        assert kid == "k002"
-        assert pinned is False
-
 
 # _resolve_candidate_id / _all_kernel_candidates — canonicalizes an aliased id
 # against the full hot ∪ skipped set (no fallback).
@@ -5296,79 +4997,6 @@ class TestResolveCandidateId:
         {"kernel_id": "k003", "name": "aten::mm", "reusable_native_kernel": False, "source_file": ""},
         {"kernel_id": "k010", "name": "aiter::rmsnorm", "reusable_native_kernel": False, "source_file": ""},
     ]
-
-    def test_exact_id(self):
-        assert krh._resolve_candidate_id("k003", self.SKIPPED) == "k003"
-
-    def test_kn_prefix_alias_canonicalized(self):
-        assert krh._resolve_candidate_id("kn001", self.SKIPPED) == "k001"
-        assert krh._resolve_candidate_id("rn010", self.SKIPPED) == "k010"
-
-    def test_non_unique_or_nonroutable_name_not_resolved(self):
-        # ``aten::mm`` is non-unique and non-routable -> leave untouched ("").
-        assert krh._resolve_candidate_id("aten::mm", self.SKIPPED) == ""
-
-    def test_pure_hallucination_returns_empty(self):
-        assert krh._resolve_candidate_id("aiter.silu_and_mul", self.SKIPPED) == ""
-
-    def test_empty_request_returns_empty(self):
-        assert krh._resolve_candidate_id("", self.SKIPPED) == ""
-        assert krh._resolve_candidate_id(None, self.SKIPPED) == ""
-
-
-class TestAllKernelCandidates:
-    def test_union_of_hot_and_skipped(self, tmp_path):
-        cp = tmp_path / "kc.json"
-        cp.write_text(
-            json.dumps(
-                {
-                    "hot_kernels": [{"kernel_id": "k005", "name": "moe"}],
-                    "skipped_kernels": [{"kernel_id": "k001", "name": "aten::mm"}],
-                }
-            ),
-            encoding="utf-8",
-        )
-        out = krh._all_kernel_candidates({"candidates_path": str(cp)})
-        assert {c["kernel_id"] for c in out} == {"k005", "k001"}
-
-    def test_missing_path_returns_empty(self):
-        assert krh._all_kernel_candidates({}) == []
-
-    def test_dedups_skipped_subset_of_hot(self, tmp_path):
-        # ``hot_kernels`` is the full ranked set and ``skipped_kernels`` its
-        # non-routable subset (they overlap); each kernel must be counted once.
-        cp = tmp_path / "kc.json"
-        hot = [
-            {"kernel_id": "k001", "name": "moe", "reusable_native_kernel": True},
-            {"kernel_id": "k002", "name": "aten::mm", "reusable_native_kernel": False},
-            {"kernel_id": "k003", "name": "aiter::rmsnorm", "reusable_native_kernel": False},
-        ]
-        skipped = [dict(c) for c in hot if not c["reusable_native_kernel"]]  # subset of hot
-        cp.write_text(json.dumps({"hot_kernels": hot, "skipped_kernels": skipped}), encoding="utf-8")
-        out = krh._all_kernel_candidates({"candidates_path": str(cp)})
-        # Each kernel exactly once, hot order preserved.
-        assert [c["kernel_id"] for c in out] == ["k001", "k002", "k003"]
-        assert len(out) == 3
-
-    def test_dedups_by_name_when_kernel_id_missing(self, tmp_path):
-        # Fall back to ``name`` when ``kernel_id`` is absent; a row with neither
-        # id nor name is never dropped.
-        cp = tmp_path / "kc.json"
-        cp.write_text(
-            json.dumps(
-                {
-                    "hot_kernels": [{"name": "moe"}, {"name": "aten::mm"}, {"gpu_pct": 1.0}],
-                    "skipped_kernels": [{"name": "aten::mm"}, {"gpu_pct": 2.0}],
-                }
-            ),
-            encoding="utf-8",
-        )
-        out = krh._all_kernel_candidates({"candidates_path": str(cp)})
-        names = [c.get("name") for c in out]
-        # "aten::mm" appears once; the two identity-less rows are both kept.
-        assert names.count("aten::mm") == 1
-        assert names.count("moe") == 1
-        assert sum(1 for c in out if not (c.get("kernel_id") or c.get("name"))) == 2
 
 
 class TestBatchKernelCandidatesRetryBudget:
@@ -5391,122 +5019,6 @@ class TestBatchKernelCandidatesRetryBudget:
             encoding="utf-8",
         )
         return cp
-
-    def test_retryable_failed_kernel_remains_batch_eligible_by_default(self, tmp_path):
-        cp = self._write_candidates(tmp_path)
-        state = SharedState.load_or_init(tmp_path)
-        state.kernel_opt_attempts = {
-            "k001": {
-                "attempts": 1,
-                "attempts_per_source": {"/p/moe_op.py": 1},
-                "failure_count": 1,
-                "last_status": "failed",
-                "last_decision": "",
-                "rejected_reason": "",
-            }
-        }
-        state.save(tmp_path)
-
-        out = krh._batch_kernel_candidates({"candidates_path": str(cp)}, session_dir=tmp_path)
-
-        assert [item["kernel_id"] for item in out] == ["k001"]
-
-    def test_exhausted_failed_kernel_is_not_batch_eligible_by_default(self, tmp_path):
-        cp = self._write_candidates(tmp_path)
-        state = SharedState.load_or_init(tmp_path)
-        state.kernel_opt_attempts = {
-            "k001": {
-                "attempts": 2,
-                "attempts_per_source": {"/p/moe_op.py": 2},
-                "failure_count": 2,
-                "last_status": "failed",
-                "last_decision": "",
-                "rejected_reason": "max_failures_2_without_keep",
-            }
-        }
-        state.rejected_kernel_ids = ["k001"]
-        state.save(tmp_path)
-
-        out = krh._batch_kernel_candidates({"candidates_path": str(cp)}, session_dir=tmp_path)
-
-        assert out == []
-
-    def test_partial_kernel_stays_single_dispatch_by_default(self, tmp_path):
-        cp = self._write_candidates(tmp_path)
-        state = SharedState.load_or_init(tmp_path)
-        state.kernel_opt_attempts = {
-            "k001": {
-                "attempts": 1,
-                "attempts_per_source": {"/p/moe_op.py": 1},
-                "partial_count": 1,
-                "last_decision": "PARTIAL",
-                "last_status": "ok",
-                "rejected_reason": "",
-            }
-        }
-        state.save(tmp_path)
-
-        out = krh._batch_kernel_candidates({"candidates_path": str(cp)}, session_dir=tmp_path)
-
-        assert out == []
-
-    def test_retryable_failed_kernel_respects_max_failures_env(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("INFERENCE_OPTIMIZER_KERNEL_OPT_MAX_FAILURES", "3")
-        cp = self._write_candidates(tmp_path)
-        state = SharedState.load_or_init(tmp_path)
-        state.kernel_opt_attempts = {
-            "k001": {
-                "attempts": 2,
-                "attempts_per_source": {"/p/moe_op.py": 2},
-                "failure_count": 2,
-                "last_status": "failed",
-                "last_decision": "",
-                "rejected_reason": "",
-            }
-        }
-        state.save(tmp_path)
-
-        out = krh._batch_kernel_candidates({"candidates_path": str(cp)}, session_dir=tmp_path)
-
-        assert [item["kernel_id"] for item in out] == ["k001"]
-
-    def test_geometry_only_shape_excluded_from_batch(self, tmp_path):
-        # A reusable kernel with a resolved source but shape_dispatchable=False
-        # fails the kernel-opt gate; it must be dropped before dispatch.
-        cp = tmp_path / "kc.json"
-        cp.write_text(
-            json.dumps(
-                {
-                    "hot_kernels": [
-                        {
-                            "kernel_id": "k001",
-                            "gpu_pct": 12.0,
-                            "reusable_native_kernel": True,
-                            "source_file": "/p/moe_op.py",
-                            "shape_dispatchable": False,
-                        },
-                        {
-                            "kernel_id": "k002",
-                            "gpu_pct": 11.0,
-                            "reusable_native_kernel": True,
-                            "source_file": "/p/attn_op.py",
-                            "shape_dispatchable": True,
-                        },
-                    ],
-                    "reusable_native_kernel_ids": ["k001", "k002"],
-                }
-            ),
-            encoding="utf-8",
-        )
-        out = krh._batch_kernel_candidates({"candidates_path": str(cp)}, session_dir=tmp_path)
-        assert [item["kernel_id"] for item in out] == ["k002"]
-
-    def test_missing_shape_dispatchable_stays_batch_eligible(self, tmp_path):
-        # TraceLens candidates omit shape_dispatchable; absent field must not be
-        # filtered so the main path is preserved.
-        cp = self._write_candidates(tmp_path)  # no shape_dispatchable key
-        out = krh._batch_kernel_candidates({"candidates_path": str(cp)}, session_dir=tmp_path)
-        assert [item["kernel_id"] for item in out] == ["k001"]
 
 
 class TestTracelensRootResolution:

@@ -47,11 +47,9 @@ def test_allowed_actions_disjoint_phases():
         assert "recover" in allowed
     assert "baseline" in phase_state.PHASE_ALLOWED_ACTIONS["PRELUDE"]
     assert "baseline" not in phase_state.PHASE_ALLOWED_ACTIONS["FRAMEWORK_AGENT"]
-    # kernel_opt and gemm_tuning are Coordinator-owned: dispatched once at KERNEL
-    # entry from a lane budget, so they are proposable in no phase at all.
+    # GEMM tuning is Coordinator-owned and is not LLM-proposable.
     assert "integrate" in phase_state.PHASE_ALLOWED_ACTIONS["KERNEL_AGENT"]
     for phase in phase_state.PHASE_NAMES:
-        assert "kernel_opt" not in phase_state.PHASE_ALLOWED_ACTIONS[phase]
         assert "gemm_tuning" not in phase_state.PHASE_ALLOWED_ACTIONS[phase]
     assert "conc_sweep" in phase_state.PHASE_ALLOWED_ACTIONS["SWEEP"]
     assert "conc_sweep" not in phase_state.PHASE_ALLOWED_ACTIONS["FRAMEWORK_AGENT"]
@@ -153,6 +151,64 @@ def test_phase_exit_reason_vocabulary_is_closed():
     assert not phase_state.is_valid_phase_exit_reason("")
     # Stripped before comparison, so a stray newline in a history row still matches.
     assert phase_state.is_valid_phase_exit_reason("  prelude_done \n")
+
+
+@pytest.mark.parametrize(
+    "status",
+    ["completed", "failed", "no_opportunity", "no_result", "partial"],
+)
+def test_current_cycle_controller_terminal_result_exits_kernel(status: str) -> None:
+    state = SharedState(
+        phase=phase_state.PHASE_KERNEL_AGENT,
+        kernel_optimizer="forge",
+        macro_cycle=2,
+        kernel_rewrite_controller_result={
+            "macro_cycle": 2,
+            "status": status,
+            "patch_count": 1,
+            "task_count": 3,
+        },
+    )
+
+    assert phase_state.kernel_work_pending(state) is False
+    reason, evidence = phase_state.exit_normal_kernel(state)
+    assert reason == "kernel_controller_done"
+    assert evidence["controller_status"] == status
+    assert evidence["patch_count"] == 1
+
+
+def test_prior_cycle_controller_result_does_not_exit_current_kernel() -> None:
+    state = SharedState(
+        phase=phase_state.PHASE_KERNEL_AGENT,
+        kernel_optimizer="forge",
+        macro_cycle=2,
+        kernel_rewrite_controller_result={
+            "macro_cycle": 1,
+            "status": "completed",
+        },
+    )
+
+    assert phase_state._controller_phase_terminal(state) is False
+
+
+def test_collective_integration_still_blocks_controller_terminal_exit() -> None:
+    state = SharedState(
+        phase=phase_state.PHASE_KERNEL_AGENT,
+        kernel_optimizer="forge",
+        macro_cycle=0,
+        kernel_rewrite_controller_result={
+            "macro_cycle": 0,
+            "status": "completed",
+        },
+        last_collective={
+            "kept": True,
+            "requires_e2e_validation": True,
+            "patch_cleanup_status": "pending",
+        },
+    )
+
+    assert phase_state.kernel_work_pending(state) is True
+    assert phase_state.exit_normal_kernel(state) is None
 
 
 def test_stop_reason_vocab_includes_v06_and_v08():
@@ -756,34 +812,6 @@ def test_policy_gate_phase_strict_blocks_explore_action_in_prelude():
     assert excinfo.value.rule == "phase_incompatible"
 
 
-def test_policy_gate_denies_kernel_request_in_explore():
-    """A kernel_agent-owned REQUEST in EXPLORE is denied by R1."""
-    state = SharedState()
-    state.record_phase_transition(
-        to_phase=phase_state.PHASE_FRAMEWORK_AGENT,
-        reason="prelude_done",
-        evidence={},
-        ts="2026-05-19T00:00:00+00:00",
-        ts_unix=1.0,
-    )
-    gate = PolicyGate(
-        role_registry=_make_role_registry(),
-        shared_state=state,
-        strict_phase=True,
-    )
-    intent = Intent(
-        type=IntentType.REQUEST,
-        payload={
-            "target_agent": "kernel_agent",
-            "kind": "run_optimization",
-            "params": {},
-        },
-    )
-    with pytest.raises(PolicyDenied) as excinfo:
-        gate.validate_intent("orchestration", intent)
-    assert excinfo.value.rule == "phase_incompatible"
-
-
 def test_policy_gate_gates_apply_patch_alias_like_integrate():
     # apply_patch is a REQUEST-kind alias of integrate and must be phase-gated
     # identically. In EXPLORE, a kernel-owned integrate REQUEST is denied by
@@ -813,49 +841,6 @@ def test_policy_gate_gates_apply_patch_alias_like_integrate():
 
     assert _rule_for("integrate") == "phase_incompatible"
     assert _rule_for("apply_patch") == "phase_incompatible"
-
-
-def test_policy_gate_phase_matrix_over_every_kernel_request_kind():
-    """Every wire kind that maps to an owned action gates on that action.
-
-    The prompt mandates the wire kind (``run_optimization``), while
-    ``PHASE_ALLOWED_ACTIONS`` is keyed by the action name (``kernel_opt``), so
-    this walks the real handler table rather than a hand-written list.
-    """
-    from hyperloom.inference_optimizer.protocol.action_surfaces import (
-        REQUEST_KIND_TO_OWNED_ACTION,
-    )
-
-    for kind, action in REQUEST_KIND_TO_OWNED_ACTION.items():
-        for phase in phase_state.PHASE_NAMES:
-            state = SharedState()
-            state.record_phase_transition(
-                to_phase=phase,
-                reason="phase_entered",
-                evidence={},
-                ts="2026-05-19T00:00:00+00:00",
-                ts_unix=1.0,
-            )
-            gate = PolicyGate(
-                role_registry=_make_role_registry(),
-                shared_state=state,
-                strict_phase=True,
-            )
-            intent = Intent(
-                type=IntentType.REQUEST,
-                payload={
-                    "target_agent": "kernel_agent",
-                    "kind": kind,
-                    "params": {},
-                },
-            )
-            allowed = action in phase_state.PHASE_ALLOWED_ACTIONS[phase]
-            if allowed:
-                gate.validate_intent("orchestration", intent)
-            else:
-                with pytest.raises(PolicyDenied) as excinfo:
-                    gate.validate_intent("orchestration", intent)
-                assert excinfo.value.rule == "phase_incompatible", (kind, phase)
 
 
 def test_every_kernel_request_kind_is_gated_or_explicitly_exempt():

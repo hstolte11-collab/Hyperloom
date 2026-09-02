@@ -1171,8 +1171,8 @@ class PolicyGate:
                     "passes; their outcomes arrive as run_fusion_done / "
                     "run_collective_done responses. Requesting one directly "
                     "skips that gate, the lane's SharedState accounting, and "
-                    "its integrate step. Propose ``kernel_opt`` for a "
-                    "source-level kernel instead."
+                    "its integrate step. Source-level rewrites are owned by "
+                    "the phase-level KernelForge controller."
                 ),
             )
         # R1 phase_incompatible: gate the resolved action against the phase.
@@ -1334,7 +1334,7 @@ class PolicyGate:
                 hint=(
                     "--no-framework-agent skips the optimisation phase, so "
                     "`explore` cannot be reintroduced into KERNEL. Use "
-                    "kernel_agent-owned actions (kernel_opt / integrate / ...), "
+                    "kernel_agent-owned actions (integrate / gemm_tuning), "
                     "or `specialist` / `integrate_patch` if you need patch "
                     "research/integration."
                 ),

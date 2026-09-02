@@ -729,11 +729,11 @@ async def test_dispatched_kernel_owned_action_rejected(tmp_path, monkeypatch):
         executed["ran"] = True
         return {"status": "ok"}
 
-    sub.register_executor("kernel_opt", _stub)
+    sub.register_executor("integrate", _stub)
     task = await sub.tasks.create(
-        kind="kernel_opt",
+        kind="integrate",
         params={},
-        idempotency_key="forged-kernel-opt",
+        idempotency_key="forged-integrate",
     )
     res = await sub.run_task(task)
     assert res.state == "failed"
