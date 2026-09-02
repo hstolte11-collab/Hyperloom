@@ -5896,7 +5896,6 @@ class TestBuildTraceAnalyzeCmd:
         state, session_dir = self._common(monkeypatch, tmp_path)
         state.model_path = "/models/sglang-model"
         state.precision = "fp8"
-        state.baseline_config_path = "/session/materialized.yaml"
         cmd, _steady = krh._build_trace_analyze_cmd(
             {"trace_input": "/t/trace"},
             session_dir=session_dir,
@@ -5915,7 +5914,6 @@ class TestBuildTraceAnalyzeCmd:
         )
         assert cmd[cmd.index("--model-path") + 1] == "/models/sglang-model"
         assert cmd[cmd.index("--precision") + 1] == "fp8"
-        assert cmd[cmd.index("--runtime-config") + 1] == "/session/materialized.yaml"
 
     def test_bypass_scriptable_cmd(self, monkeypatch, tmp_path):
         state, session_dir = self._common(monkeypatch, tmp_path)
@@ -5954,7 +5952,6 @@ class TestBuildTraceAnalyzeCmd:
         assert "--split-conc" not in cmd
         # bypass takes no analysis-route flag.
         assert "--analysis-route" not in cmd
-        assert "--runtime-config" not in cmd
         assert "--steady-state-mode" in cmd and cmd[cmd.index("--steady-state-mode") + 1] == "auto"
         assert cmd[-1] == "--dry-run"
         assert steady == "auto"
