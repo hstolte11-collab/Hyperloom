@@ -63,12 +63,12 @@ def test_source_current_registry_closes_exact_roster_and_lineage():
         "rocm_root": "/opt/rocm/core-10.0",
     }
     assert registry.source_lineages["vllm_rocm10"] == {
-        "repository_commit": "f27c6456c8819b619b8439e6b96b664482cdaa20",
-        "repository_tree": "bd7403d13337ec0832a5e6341bb47979a283a456",
+        "repository_commit": "6ddd7a77a256e90f86c108eeed4ce46602cf9657",
+        "repository_tree": "f43b2d6d7fc32c656ea37abd28fc3de01e4228ba",
     }
     assert registry.source_lineages["sglang_async_v7"] == {
-        "repository_commit": "f63458b5beaceabbd9d749b9fc956370e1b649e6",
-        "repository_tree": "cdafa106e874c774da83f03fb7dc7a07ba79eef6",
+        "repository_commit": "cb9e016cb33b98bc804a57bc70b8272d8e8d134c",
+        "repository_tree": "62dd11c8803981efd9989ccf8daff2612ace0a84",
     }
     assert registry.fallback == "none"
     assert registry.promotion_authority is False
