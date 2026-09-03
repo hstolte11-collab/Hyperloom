@@ -1,0 +1,38 @@
+{
+  "schema": "hyperloom.gfx1151-production-provider-roster.v1",
+  "status": "QUALIFIED",
+  "providers": [
+    {
+      "id": "codex-native-oauth",
+      "provider": "codex",
+      "protocol": "codex_app_server",
+      "model": "gpt-5.6-sol",
+      "auth_mode": "native_oauth",
+      "capabilities": ["coder", "structured_output"],
+      "sandbox": "read_only",
+      "tools": [],
+      "egress": true,
+      "max_attempts": 1,
+      "fallback": "none"
+    },
+    {
+      "id": "hermes-openai-codex",
+      "provider": "hermes",
+      "protocol": "hermes_oneshot",
+      "model": "gpt-5.6-sol",
+      "auth_mode": "isolated_profile",
+      "profile": "hyperloomcandidate",
+      "inference_provider": "openai-codex",
+      "capabilities": ["coder", "structured_output"],
+      "sandbox": "read_only",
+      "tools": [],
+      "egress": true,
+      "max_attempts": 1,
+      "fallback": "none"
+    }
+  ],
+  "claude_wiring": "preserved_available_not_selected",
+  "provider_fallback": "none",
+  "model_fallback": "none",
+  "promotion_authority": false
+}

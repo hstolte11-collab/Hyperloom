@@ -1,0 +1,1654 @@
+{
+  "closed_donors": [
+    {
+      "id": "rdna3-w4a16-gfx1100-only",
+      "reason": "RDNA3W4A16LinearKernel requires exact gfx1100 and is not a gfx1151 target.",
+      "source_files": [
+        "vllm/model_executor/kernels/linear/mixed_precision/rdna3_w4a16.py",
+        "tests/kernels/quantization/test_rdna3_w4a16.py"
+      ]
+    },
+    {
+      "id": "aiter-w8a8-gfx1151-unqualified",
+      "reason": "AITER INT8 is ahead of Triton in ROCm selection but was not qualified for gfx1151; Task 10.8 forced Triton.",
+      "source_files": [
+        "vllm/model_executor/kernels/linear/scaled_mm/aiter.py",
+        "vllm/model_executor/kernels/linear/__init__.py"
+      ]
+    },
+    {
+      "id": "task10.8-campaign-variants-not-donors",
+      "reason": "Canary, ordinary, profile, stress, and recovery are qualification windows over registered families, not distinct implementation donors.",
+      "source_files": [
+        "gfx1151_archive_port_contract.json"
+      ]
+    },
+    {
+      "id": "historical-archive-binaries-not-source-current",
+      "reason": "Historical binaries and promotion artifacts are evidence inputs, not candidate-editable source targets in this registry.",
+      "source_files": [
+        "gfx1151_archive_port_contract.json"
+      ]
+    }
+  ],
+  "fallback": "none",
+  "files": {
+    "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m128_qfloat_op.hip": {
+      "bytes": 4787,
+      "sha256": "994af1d33ad9c8abe54c8475328b4f9c5f6de04790219cc3ce98ecb446e33abe",
+      "source_lineage": "vllm_rocm10"
+    },
+    "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m128_v3_op.hip": {
+      "bytes": 21178,
+      "sha256": "da90bff3782fd46b43138f1a9b793e3090da67cf32d13c3f6a440fe8a125d0e0",
+      "source_lineage": "vllm_rocm10"
+    },
+    "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m1_dot_pair2_signed_op.hip": {
+      "bytes": 9795,
+      "sha256": "3f01ca4e79cd86601247faa58a9dfdd01c1150acbe99ced5c1d48b306b8c802c",
+      "source_lineage": "vllm_rocm10"
+    },
+    "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip": {
+      "bytes": 35282,
+      "sha256": "95e787ec86fb2d0d787844517b08520966d711bbf7a5d33429fe499bffe849e7",
+      "source_lineage": "vllm_rocm10"
+    },
+    "csrc/rocm/ops.h": {
+      "bytes": 2781,
+      "sha256": "6cc756e4a806ce7c2ed455eb28460bd3843e49d1d8f66cf9286d3d77e13d32e3",
+      "source_lineage": "vllm_rocm10"
+    },
+    "csrc/rocm/skinny_gemms_int4.cu": {
+      "bytes": 31786,
+      "sha256": "869427bd3f2af44b01165bcbf5c41514d0ef3b6443f9c206a3bd36fc994cf519",
+      "source_lineage": "vllm_rocm10"
+    },
+    "csrc/rocm/torch_bindings.cpp": {
+      "bytes": 4169,
+      "sha256": "c1b7c1c75a9ccba729caaa7a881bdf28d100931e05316a149621f3b9fa401b02",
+      "source_lineage": "vllm_rocm10"
+    },
+    "gfx1151_archive_port_contract.json": {
+      "bytes": 1759,
+      "sha256": "8ddfa87578dee4cdc5f814332ff5200228ff8f82f0aafddff519b63412f51282",
+      "source_lineage": "vllm_rocm10"
+    },
+    "python/sglang/srt/configs/model_config.py": {
+      "bytes": 83010,
+      "sha256": "102155543d83441706f51088a7e26fac8f4bdab4ed0618a25d08e71ea697c64b",
+      "source_lineage": "sglang_async_v7"
+    },
+    "python/sglang/srt/entrypoints/openai/lowbit_admission.py": {
+      "bytes": 2025,
+      "sha256": "4ea4040c25f12038ba4a4ef7232e963311abc80423c5f3e839236ae441b26be1",
+      "source_lineage": "sglang_async_v7"
+    },
+    "python/sglang/srt/layers/quantization/__init__.py": {
+      "bytes": 6389,
+      "sha256": "86cf18f5bd07c34e355d51d939aab58f1d451c71cea589776c167a787c2ef780",
+      "source_lineage": "sglang_async_v7"
+    },
+    "python/sglang/srt/layers/quantization/gfx1151_lowbit.py": {
+      "bytes": 17765,
+      "sha256": "25e14787c19f878163b765cb49ecd32d24dec3f94a27bf85edf259b8005d0c7f",
+      "source_lineage": "sglang_async_v7"
+    },
+    "python/sglang/srt/managers/tp_worker.py": {
+      "bytes": 24874,
+      "sha256": "76d7bbcabb42ca84aa89918f2ee6feead9a8f3c937c36622e4d752e6344be791",
+      "source_lineage": "sglang_async_v7"
+    },
+    "python/sglang/srt/server_args.py": {
+      "bytes": 324467,
+      "sha256": "991e0aa484c5f62e98f43eca9e9fd1d0d4976ef8326b235864a0f1948b5b29b9",
+      "source_lineage": "sglang_async_v7"
+    },
+    "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py": {
+      "bytes": 4214,
+      "sha256": "daa9e504c9461272e893144e945724eaa1aa9cdb83b1827cdd3e11ef642c881d",
+      "source_lineage": "sglang_async_v7"
+    },
+    "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py": {
+      "bytes": 3572,
+      "sha256": "0bf7f30fcfde534a6e9659892342a4f91e22a4c7c5839c109cd763840bad9af1",
+      "source_lineage": "sglang_async_v7"
+    },
+    "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py": {
+      "bytes": 4810,
+      "sha256": "f188e30ba513ad1598797de2e4b1eb753fa882ea0cde3f10adb47b7058ac8c24",
+      "source_lineage": "sglang_async_v7"
+    },
+    "tests/kernels/quantization/test_int8_kernel.py": {
+      "bytes": 5095,
+      "sha256": "5264ec31304e0705a4157aa0680b2b95121fd8cc7fe79bc5d457dacdad554d61",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/kernels/quantization/test_rdna3_w4a16.py": {
+      "bytes": 9979,
+      "sha256": "f505aab6c62681674d87883ef3877ed522a9cbb78eff5e68668112d395bbcf30",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/kernels/quantization/test_rdna_hybrid_w4a16.py": {
+      "bytes": 18305,
+      "sha256": "001e270251475452e9d71dafdc190aa84f0e04aef5ae6251709d5091e28220a5",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/kernels/quantization/test_triton_w4a16.py": {
+      "bytes": 14790,
+      "sha256": "8df43de471e8382e31afa70a550da8d84583738b0cb558a50ac83d91a3d00776",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/kernels/quantization/test_w4a16_kernel_selection.py": {
+      "bytes": 2461,
+      "sha256": "e2e3107d4648916b56d1962092a3b51da2e4fce52755bebe1807d53c43f5c6d3",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/quantization/test_compressed_tensors.py": {
+      "bytes": 33021,
+      "sha256": "a06dbda7bc3f47e9e2ecc9d8862478a4ca9a9c533befb6c9d5eff958cf034810",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/quantization/test_gfx1151_archive_port_contract.py": {
+      "bytes": 6124,
+      "sha256": "577fb85b97b28fc9892009f50869378a40ed48ad117bf084cf4efe7ab66b113d",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/quantization/test_gfx1151_archive_trace_integrity.py": {
+      "bytes": 1708,
+      "sha256": "bcf155317b93452747b64621d3e3a6410be96135f81582643363b632c77c277a",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/quantization/test_gfx1151_w4a4_archive.py": {
+      "bytes": 13392,
+      "sha256": "ba3787f530971b3b17a10503cf5829f76376a873e9d81b55936ec6a47d310dbf",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tests/quantization/test_gfx1151_w4a4_port_manifest.py": {
+      "bytes": 5641,
+      "sha256": "c03c386e1d7097004081960360147c9a9893609a7bfe33fc6e389822a08110dd",
+      "source_lineage": "vllm_rocm10"
+    },
+    "tools/build_gfx1151_archive_w4a4_rocm10.py": {
+      "bytes": 6031,
+      "sha256": "65da743c74f48f0ef4976e1b976b18ad203fe75e7a9db510f251ced15656de8d",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/_custom_ops.py": {
+      "bytes": 121644,
+      "sha256": "9fb29a33a63cd625b42a0bf000d821bb371d5eefa24a2376525fc371155afd02",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/kernels/linear/__init__.py": {
+      "bytes": 40841,
+      "sha256": "752413dcdd6137f04c46f149f99c2fb07d46c62949299b27d7cfaecd97f0e568",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/kernels/linear/mixed_precision/rdna3_w4a16.py": {
+      "bytes": 7460,
+      "sha256": "037c54e54dc2ab2892dac3b10da5a6a9dae3e3a87373b2c3625a688dd589ecc6",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/kernels/linear/mixed_precision/rdna_hybrid_w4a16.py": {
+      "bytes": 20581,
+      "sha256": "a136168a08484c2b3e9d18ba2fcfbd9c067a5a70dc1ebb9e319b89ddb1e5a48e",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/kernels/linear/mixed_precision/triton_w4a16.py": {
+      "bytes": 17877,
+      "sha256": "88e3676dbab481ea21360d24359315e86b454548be06f552a08694eb7b0a0fe3",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/kernels/linear/scaled_mm/aiter.py": {
+      "bytes": 15379,
+      "sha256": "492554d99032c59221dc73dc1bd369dc9d01dd70be212140b9baec2594880cc9",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/kernels/linear/scaled_mm/triton.py": {
+      "bytes": 9192,
+      "sha256": "9d372d1be1cdcfcd97c1bce5d5c45bcba802046d52698336efb7903a70df06ad",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py": {
+      "bytes": 3970,
+      "sha256": "a4806079457e068b0616b9c83f6883489e4c16a23c74225143af86278d00a0de",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/layers/quantization/compressed_tensors/triton_scaled_mm.py": {
+      "bytes": 7113,
+      "sha256": "4e4414e7a556b902fd9b3bec9140e7eb9c2a086a368c30df1e5dcef964a788af",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/layers/quantization/gfx1151_w4a4_archive.py": {
+      "bytes": 25419,
+      "sha256": "bc72c0dc396dc3c941c2def7b596ba89819a06739972f41e8f2f0d0e41439be8",
+      "source_lineage": "vllm_rocm10"
+    },
+    "vllm/model_executor/layers/quantization/utils/int8_utils.py": {
+      "bytes": 13329,
+      "sha256": "0426f97b9d2d095c6e9a34a4cab7569e7e5e1a0c0a08eec48d06d35a1d9fb54b",
+      "source_lineage": "vllm_rocm10"
+    }
+  },
+  "platform": {
+    "board": "strix-halo-radeon-8060s",
+    "isa": "gfx1151",
+    "rocm_root": "/opt/rocm/core-10.0"
+  },
+  "promotion_authority": false,
+  "registry_id": "gfx1151-rocm10-kernel-targets-v3",
+  "schema": "hyperloom.kernel-target-registry.v1",
+  "source_lineages": {
+    "sglang_async_v7": {
+      "repository_commit": "f63458b5beaceabbd9d749b9fc956370e1b649e6",
+      "repository_tree": "cdafa106e874c774da83f03fb7dc7a07ba79eef6"
+    },
+    "vllm_rocm10": {
+      "repository_commit": "f27c6456c8819b619b8439e6b96b664482cdaa20",
+      "repository_tree": "bd7403d13337ec0832a5e6341bb47979a283a456"
+    }
+  },
+  "targets": [
+    {
+      "allowed_edit_paths": [
+        "vllm/model_executor/kernels/linear/mixed_precision/rdna_hybrid_w4a16.py",
+        "csrc/rocm/skinny_gemms_int4.cu"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/kernels/quantization/test_rdna_hybrid_w4a16.py",
+          "tests/kernels/quantization/test_w4a16_kernel_selection.py"
+        ],
+        "oracle": "torch_reference_w4a16",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "group_sizes": [
+          32,
+          64,
+          128
+        ],
+        "has_g_idx": false,
+        "k_divisible_by": 16,
+        "k_times_m_max": 32768,
+        "m_max": 5,
+        "packed_layout": "exllama_shuffle_int8_N_Kdiv2",
+        "route": "hip_skinny",
+        "scale_layout": "N_KdivG",
+        "weight_types": [
+          "uint4b8",
+          "uint4"
+        ]
+      },
+      "fallback": "none",
+      "family": "w4a16",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "vllm-rdna-hybrid-w4a16-decode",
+      "materialization": {
+        "commands": [
+          "build_vllm_rocm_extension:_rocm_C"
+        ],
+        "entrypoints": [
+          "torch.ops._rocm_C.wvSplitK_int4_g",
+          "torch.ops.vllm.rdna_hybrid_w4a16_apply"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "decode_kernel",
+      "source_files": [
+        "vllm/model_executor/kernels/linear/mixed_precision/rdna_hybrid_w4a16.py",
+        "vllm/model_executor/kernels/linear/__init__.py",
+        "vllm/_custom_ops.py",
+        "csrc/rocm/ops.h",
+        "csrc/rocm/torch_bindings.cpp",
+        "csrc/rocm/skinny_gemms_int4.cu",
+        "tests/kernels/quantization/test_rdna_hybrid_w4a16.py",
+        "tests/kernels/quantization/test_w4a16_kernel_selection.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "RDNAHybridW4A16LinearKernel",
+        "rdna_hybrid_w4a16_apply",
+        "wvSplitK_int4_g"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "vllm/model_executor/kernels/linear/mixed_precision/rdna_hybrid_w4a16.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/kernels/quantization/test_rdna_hybrid_w4a16.py",
+          "tests/kernels/quantization/test_w4a16_kernel_selection.py"
+        ],
+        "oracle": "torch_reference_w4a16",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "dispatch": "M>5 or K*M>32768",
+        "gfx1151_shape_overrides": 8,
+        "group_sizes": [
+          32,
+          64,
+          128
+        ],
+        "has_g_idx": false,
+        "k_divisible_by": 16,
+        "packed_layout": "exllama_shuffle_int8_N_Kdiv2",
+        "route": "triton_fused_dequant",
+        "scale_layout": "N_KdivG",
+        "weight_types": [
+          "uint4b8",
+          "uint4"
+        ]
+      },
+      "fallback": "none",
+      "family": "w4a16",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "vllm-rdna-hybrid-w4a16-prefill",
+      "materialization": {
+        "commands": [
+          "triton_jit_on_first_call"
+        ],
+        "entrypoints": [
+          "torch.ops.vllm.rdna_hybrid_w4a16_apply"
+        ],
+        "kind": "triton_jit"
+      },
+      "promotion_authority": false,
+      "role": "prefill_kernel",
+      "source_files": [
+        "vllm/model_executor/kernels/linear/mixed_precision/rdna_hybrid_w4a16.py",
+        "vllm/model_executor/kernels/linear/__init__.py",
+        "vllm/_custom_ops.py",
+        "csrc/rocm/ops.h",
+        "csrc/rocm/torch_bindings.cpp",
+        "csrc/rocm/skinny_gemms_int4.cu",
+        "tests/kernels/quantization/test_rdna_hybrid_w4a16.py",
+        "tests/kernels/quantization/test_w4a16_kernel_selection.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "RDNAHybridW4A16LinearKernel",
+        "triton_w4a16_skinny_fmt_gemm",
+        "_triton_w4a16_skinny_fmt_kernel"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "vllm/model_executor/kernels/linear/mixed_precision/triton_w4a16.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/kernels/quantization/test_triton_w4a16.py",
+          "tests/kernels/quantization/test_w4a16_kernel_selection.py"
+        ],
+        "oracle": "triton_w4a16_reference",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "role": "generic_w4a16_fallback",
+        "selection_after": [
+          "RDNA3W4A16LinearKernel",
+          "RDNAHybridW4A16LinearKernel"
+        ]
+      },
+      "fallback": "none",
+      "family": "w4a16",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "vllm-triton-w4a16-fallback",
+      "materialization": {
+        "commands": [
+          "triton_jit_on_first_call"
+        ],
+        "entrypoints": [
+          "TritonW4A16LinearKernel.apply_weights"
+        ],
+        "kind": "triton_jit"
+      },
+      "promotion_authority": false,
+      "role": "fallback_prefill_kernel",
+      "source_files": [
+        "vllm/model_executor/kernels/linear/mixed_precision/triton_w4a16.py",
+        "vllm/model_executor/kernels/linear/__init__.py",
+        "tests/kernels/quantization/test_triton_w4a16.py",
+        "tests/kernels/quantization/test_w4a16_kernel_selection.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "TritonW4A16LinearKernel"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_archive.py",
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_route_and_pack_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtype": "bfloat16",
+        "group_size": 32,
+        "packed_dtype": "int32",
+        "scale_dtype": "float32",
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-perf-quantizer",
+      "materialization": {
+        "commands": [
+          "tools/build_gfx1151_archive_w4a4_rocm10.py:perf"
+        ],
+        "entrypoints": [
+          "gfx1151_w4a4_perf_ext_rocm10.so"
+        ],
+        "kind": "hip_torch_extension"
+      },
+      "promotion_authority": false,
+      "role": "quantizer",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "vllm/model_executor/layers/quantization/gfx1151_w4a4_archive.py",
+        "tools/build_gfx1151_archive_w4a4_rocm10.py",
+        "tests/quantization/test_gfx1151_w4a4_archive.py",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "gfx1151_w4a4_perf::quantize_s4_groupmajor",
+        "gfx1151_w4a4_perf::quantize_s4_rowmajor"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m128_qfloat_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_archive.py",
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_route_and_pack_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": 128,
+        "activation_dtype": "bfloat16",
+        "group_size": 32,
+        "route": "v4q_pair2",
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-m128-v4q-quantizer",
+      "materialization": {
+        "commands": [
+          "tools/build_gfx1151_archive_w4a4_rocm10.py:m128_v4q"
+        ],
+        "entrypoints": [
+          "gfx1151_w4a4_m128_v4q_ext_rocm10.so"
+        ],
+        "kind": "hip_torch_extension"
+      },
+      "promotion_authority": false,
+      "role": "quantizer",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m128_qfloat_op.hip",
+        "vllm/model_executor/layers/quantization/gfx1151_w4a4_archive.py",
+        "tools/build_gfx1151_archive_w4a4_rocm10.py",
+        "tests/quantization/test_gfx1151_w4a4_archive.py",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "gfx1151_w4a4_m128_v4q::quantize",
+        "Gfx1151W4A4Runtime.quantize_candidate"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m1_dot_pair2_signed_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_archive.py",
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_request_owned_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": 1,
+        "activation_dtype": "bfloat16",
+        "group_size": 32,
+        "route": "m1_pair2_signed_dot8",
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-m1-pair2-dot",
+      "materialization": {
+        "commands": [
+          "tools/build_gfx1151_archive_w4a4_rocm10.py:m1_pair2_signed"
+        ],
+        "entrypoints": [
+          "gfx1151_w4a4_m1_dot_pair2_signed_ext_rocm10.so"
+        ],
+        "kind": "hip_torch_extension"
+      },
+      "promotion_authority": false,
+      "role": "decode_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m1_dot_pair2_signed_op.hip",
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "vllm/model_executor/layers/quantization/gfx1151_w4a4_archive.py",
+        "tools/build_gfx1151_archive_w4a4_rocm10.py",
+        "tests/quantization/test_gfx1151_w4a4_archive.py",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "gfx1151_w4a4_m1_dot_pair2_signed::run_quantized",
+        "m1_pair2_signed_dot8"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m128_v3_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_archive.py",
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_request_owned_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": 128,
+        "activation_dtype": "bfloat16",
+        "group_size": 32,
+        "route": "m128_v4q_quantizer_exact_v3",
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-m128-v3-linear-wmma",
+      "materialization": {
+        "commands": [
+          "tools/build_gfx1151_archive_w4a4_rocm10.py:m128_v3"
+        ],
+        "entrypoints": [
+          "gfx1151_w4a4_m128_v3_ext_rocm10.so"
+        ],
+        "kind": "hip_torch_extension"
+      },
+      "promotion_authority": false,
+      "role": "prefill_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_m128_v3_op.hip",
+        "vllm/model_executor/layers/quantization/gfx1151_w4a4_archive.py",
+        "tools/build_gfx1151_archive_w4a4_rocm10.py",
+        "tests/quantization/test_gfx1151_w4a4_archive.py",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "gfx1151_w4a4_m128_v3::linear_quantized",
+        "s4s4_g32_wmma_kbatch",
+        "s4s4_g32_wmma_dual_n"
+      ]
+    },
+    {
+      "allowed_edit_paths": [],
+      "correctness": {
+        "evidence_state": "control_only",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_archive.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_dispatch_policy_oracle",
+        "requires_gpu": false
+      },
+      "domain": {
+        "candidate_editable": false,
+        "selection": "route_code=1 when M<=8 else route_code=2",
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "control_only"
+      },
+      "id": "gfx1151-w4a4-python-fallback-controls",
+      "materialization": {
+        "commands": [],
+        "entrypoints": [
+          "Gfx1151W4A4Runtime.fallback"
+        ],
+        "kind": "python_runtime"
+      },
+      "promotion_authority": false,
+      "role": "dispatch_policy",
+      "source_files": [
+        "vllm/model_executor/layers/quantization/gfx1151_w4a4_archive.py",
+        "tests/quantization/test_gfx1151_w4a4_archive.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "control_only",
+      "symbols": [
+        "Gfx1151W4A4Runtime.fallback",
+        "fallback_dot_baseline",
+        "fallback_wmma_baseline_padded"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py",
+        "vllm/model_executor/layers/quantization/utils/int8_utils.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/kernels/quantization/test_int8_kernel.py",
+          "tests/quantization/test_compressed_tensors.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py"
+        ],
+        "oracle": "int8_reference_quantization",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_scale": "per_token_M_1",
+        "input_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "output_dtype": "int8",
+        "weight_dtype": "int8",
+        "wire": "compressed-tensors-int8-dynamic-token"
+      },
+      "fallback": "none",
+      "family": "w8a8",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w8a8-dynamic-token-quantizer",
+      "materialization": {
+        "commands": [
+          "load_vllm_quantization_scheme"
+        ],
+        "entrypoints": [
+          "CompressedTensorsW8A8Int8.process_weights_after_loading",
+          "torch.ops.scaled_int8_quant"
+        ],
+        "kind": "vllm_python_and_custom_op"
+      },
+      "promotion_authority": false,
+      "role": "quantizer",
+      "source_files": [
+        "vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py",
+        "vllm/model_executor/kernels/linear/scaled_mm/triton.py",
+        "vllm/model_executor/layers/quantization/compressed_tensors/triton_scaled_mm.py",
+        "vllm/model_executor/layers/quantization/utils/int8_utils.py",
+        "vllm/model_executor/kernels/linear/__init__.py",
+        "tests/kernels/quantization/test_int8_kernel.py",
+        "tests/quantization/test_compressed_tensors.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "CompressedTensorsW8A8Int8",
+        "per_token_quant_int8",
+        "torch.ops.scaled_int8_quant"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "vllm/model_executor/kernels/linear/scaled_mm/triton.py",
+        "vllm/model_executor/layers/quantization/compressed_tensors/triton_scaled_mm.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/kernels/quantization/test_int8_kernel.py",
+          "tests/quantization/test_compressed_tensors.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py"
+        ],
+        "oracle": "int8_scaled_mm_reference",
+        "requires_gpu": true
+      },
+      "domain": {
+        "K": "positive",
+        "M": "positive",
+        "N": "positive",
+        "input_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "input_layout": "M_K_weak_contiguous",
+        "quantized_dtype": "int8",
+        "route": "triton_int8_scaled_mm",
+        "weight_layout": "K_N_after_transpose",
+        "wire": "compressed-tensors-int8-dynamic-token"
+      },
+      "fallback": "none",
+      "family": "w8a8",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w8a8-triton-scaled-mm",
+      "materialization": {
+        "commands": [
+          "triton_jit_on_first_call"
+        ],
+        "entrypoints": [
+          "TritonInt8ScaledMMLinearKernel.apply_weights",
+          "scaled_mm_kernel"
+        ],
+        "kind": "triton_jit"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py",
+        "vllm/model_executor/kernels/linear/scaled_mm/triton.py",
+        "vllm/model_executor/layers/quantization/compressed_tensors/triton_scaled_mm.py",
+        "vllm/model_executor/layers/quantization/utils/int8_utils.py",
+        "vllm/model_executor/kernels/linear/__init__.py",
+        "tests/kernels/quantization/test_int8_kernel.py",
+        "tests/quantization/test_compressed_tensors.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "TritonInt8ScaledMMLinearKernel",
+        "triton_scaled_mm",
+        "scaled_mm_kernel"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+        ],
+        "oracle": "sglang_lowbit_reference_and_route",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "framework_version": "0.5.15",
+        "image_id": "sha256:869e23eec020047c4dc57f6ee42fd33107ea53f0ec202f9fd2b1d795235c7e50",
+        "module_sha256": "404cc2c0c49669cadb2be43326b7a3208c1e3e832ff77c6fd614238bbb9b0983",
+        "wire": "gfx1151.fp8_e4m3fnuz.per_channel_f32"
+      },
+      "fallback": "none",
+      "family": "fp8",
+      "framework": "sglang",
+      "framework_support": {
+        "sglang": "native",
+        "vllm": "unavailable_sglang_private"
+      },
+      "id": "sglang-gfx1151-fp8-e4m3fnuz",
+      "materialization": {
+        "commands": [
+          "build_sglang_rocm_image:v16-async-v7"
+        ],
+        "entrypoints": [
+          "Gfx1151Fp8E4M3FnuzLinearMethod"
+        ],
+        "kind": "sglang_rocm_image"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py",
+        "python/sglang/srt/layers/quantization/__init__.py",
+        "python/sglang/srt/configs/model_config.py",
+        "python/sglang/srt/server_args.py",
+        "python/sglang/srt/managers/tp_worker.py",
+        "python/sglang/srt/entrypoints/openai/lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+      ],
+      "source_lineage": "sglang_async_v7",
+      "status": "available",
+      "symbols": [
+        "Gfx1151Fp8E4M3FnuzLinearMethod",
+        "hyperloom_fp8_e4m3fnuz_fused_fma_f32"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+        ],
+        "oracle": "sglang_lowbit_reference_and_route",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "framework_version": "0.5.15",
+        "image_id": "sha256:869e23eec020047c4dc57f6ee42fd33107ea53f0ec202f9fd2b1d795235c7e50",
+        "module_sha256": "404cc2c0c49669cadb2be43326b7a3208c1e3e832ff77c6fd614238bbb9b0983",
+        "wire": "gfx1151.mxfp4_e2m1_e8m0.block32"
+      },
+      "fallback": "none",
+      "family": "mxfp4",
+      "framework": "sglang",
+      "framework_support": {
+        "sglang": "native",
+        "vllm": "unavailable_sglang_private"
+      },
+      "id": "sglang-gfx1151-mxfp4-e2m1-e8m0",
+      "materialization": {
+        "commands": [
+          "build_sglang_rocm_image:v16-async-v7"
+        ],
+        "entrypoints": [
+          "Gfx1151Mxfp4E2M1E8M0LinearMethod"
+        ],
+        "kind": "sglang_rocm_image"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py",
+        "python/sglang/srt/layers/quantization/__init__.py",
+        "python/sglang/srt/configs/model_config.py",
+        "python/sglang/srt/server_args.py",
+        "python/sglang/srt/managers/tp_worker.py",
+        "python/sglang/srt/entrypoints/openai/lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+      ],
+      "source_lineage": "sglang_async_v7",
+      "status": "available",
+      "symbols": [
+        "Gfx1151Mxfp4E2M1E8M0LinearMethod",
+        "hyperloom_mxfp4_e2m1_e8m0_fused_fma_f32"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+        ],
+        "oracle": "sglang_lowbit_reference_and_route",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "framework_version": "0.5.15",
+        "image_id": "sha256:869e23eec020047c4dc57f6ee42fd33107ea53f0ec202f9fd2b1d795235c7e50",
+        "module_sha256": "404cc2c0c49669cadb2be43326b7a3208c1e3e832ff77c6fd614238bbb9b0983",
+        "wire": "gfx1151.w8a8.signed_per_channel_per_token"
+      },
+      "fallback": "none",
+      "family": "w8a8",
+      "framework": "sglang",
+      "framework_support": {
+        "sglang": "native",
+        "vllm": "unavailable_sglang_private"
+      },
+      "id": "sglang-gfx1151-w8a8",
+      "materialization": {
+        "commands": [
+          "build_sglang_rocm_image:v16-async-v7"
+        ],
+        "entrypoints": [
+          "Gfx1151W8A8LinearMethod"
+        ],
+        "kind": "sglang_rocm_image"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py",
+        "python/sglang/srt/layers/quantization/__init__.py",
+        "python/sglang/srt/configs/model_config.py",
+        "python/sglang/srt/server_args.py",
+        "python/sglang/srt/managers/tp_worker.py",
+        "python/sglang/srt/entrypoints/openai/lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+      ],
+      "source_lineage": "sglang_async_v7",
+      "status": "available",
+      "symbols": [
+        "Gfx1151W8A8LinearMethod",
+        "hyperloom_w8a8_dot4_i32_iu8"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+        ],
+        "oracle": "sglang_lowbit_reference_and_route",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "framework_version": "0.5.15",
+        "image_id": "sha256:869e23eec020047c4dc57f6ee42fd33107ea53f0ec202f9fd2b1d795235c7e50",
+        "module_sha256": "404cc2c0c49669cadb2be43326b7a3208c1e3e832ff77c6fd614238bbb9b0983",
+        "wire": "gfx1151.w4a8.signed_per_channel_per_token"
+      },
+      "fallback": "none",
+      "family": "w4a8",
+      "framework": "sglang",
+      "framework_support": {
+        "sglang": "native",
+        "vllm": "unavailable_sglang_private"
+      },
+      "id": "sglang-gfx1151-w4a8",
+      "materialization": {
+        "commands": [
+          "build_sglang_rocm_image:v16-async-v7"
+        ],
+        "entrypoints": [
+          "Gfx1151W4A8LinearMethod"
+        ],
+        "kind": "sglang_rocm_image"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py",
+        "python/sglang/srt/layers/quantization/__init__.py",
+        "python/sglang/srt/configs/model_config.py",
+        "python/sglang/srt/server_args.py",
+        "python/sglang/srt/managers/tp_worker.py",
+        "python/sglang/srt/entrypoints/openai/lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+      ],
+      "source_lineage": "sglang_async_v7",
+      "status": "available",
+      "symbols": [
+        "Gfx1151W4A8LinearMethod",
+        "hyperloom_w4a8_dot4_i32_iu8"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+        ],
+        "oracle": "sglang_lowbit_reference_and_route",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "eligible_layers": "text MLP layers 6-13",
+        "framework_version": "0.5.15",
+        "image_id": "sha256:869e23eec020047c4dc57f6ee42fd33107ea53f0ec202f9fd2b1d795235c7e50",
+        "module_sha256": "404cc2c0c49669cadb2be43326b7a3208c1e3e832ff77c6fd614238bbb9b0983",
+        "wire": "gfx1151.w4a4.signed_per_channel_per_token"
+      },
+      "fallback": "none",
+      "family": "w4a4",
+      "framework": "sglang",
+      "framework_support": {
+        "sglang": "native",
+        "vllm": "unavailable_sglang_private"
+      },
+      "id": "sglang-gfx1151-w4a4",
+      "materialization": {
+        "commands": [
+          "build_sglang_rocm_image:v16-async-v7"
+        ],
+        "entrypoints": [
+          "Gfx1151W4A4LinearMethod"
+        ],
+        "kind": "sglang_rocm_image"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py",
+        "python/sglang/srt/layers/quantization/__init__.py",
+        "python/sglang/srt/configs/model_config.py",
+        "python/sglang/srt/server_args.py",
+        "python/sglang/srt/managers/tp_worker.py",
+        "python/sglang/srt/entrypoints/openai/lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+      ],
+      "source_lineage": "sglang_async_v7",
+      "status": "available",
+      "symbols": [
+        "Gfx1151W4A4LinearMethod",
+        "hyperloom_w4a4_dot8_i32_iu4"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py"
+      ],
+      "correctness": {
+        "evidence_state": "qualified",
+        "files": [
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+          "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+        ],
+        "oracle": "sglang_request_owned_model_route",
+        "requires_gpu": true
+      },
+      "domain": {
+        "activation_dtypes": [
+          "float16",
+          "bfloat16"
+        ],
+        "framework_version": "0.5.15",
+        "image_id": "sha256:869e23eec020047c4dc57f6ee42fd33107ea53f0ec202f9fd2b1d795235c7e50",
+        "live_model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+        "module_sha256": "404cc2c0c49669cadb2be43326b7a3208c1e3e832ff77c6fd614238bbb9b0983",
+        "wire": "gfx1151.w4a16.signed_per_channel"
+      },
+      "fallback": "none",
+      "family": "w4a16",
+      "framework": "sglang",
+      "framework_support": {
+        "sglang": "native",
+        "vllm": "unavailable_sglang_private"
+      },
+      "id": "sglang-gfx1151-w4a16",
+      "materialization": {
+        "commands": [
+          "build_sglang_rocm_image:v16-async-v7"
+        ],
+        "entrypoints": [
+          "Gfx1151W4A16LinearMethod"
+        ],
+        "kind": "sglang_rocm_image"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "python/sglang/srt/layers/quantization/gfx1151_lowbit.py",
+        "python/sglang/srt/layers/quantization/__init__.py",
+        "python/sglang/srt/configs/model_config.py",
+        "python/sglang/srt/server_args.py",
+        "python/sglang/srt/managers/tp_worker.py",
+        "python/sglang/srt/entrypoints/openai/lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_admission.py",
+        "test/registered/unit/layers/quantization/test_gfx1151_lowbit_rocm10_integration.py"
+      ],
+      "source_lineage": "sglang_async_v7",
+      "status": "available",
+      "symbols": [
+        "Gfx1151W4A16LinearMethod",
+        "hyperloom_w4a16_fused_fma_f32"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_forced_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": {
+          "max": 8,
+          "min": 1
+        },
+        "activation_dtype": "bfloat16",
+        "automatic_selection": false,
+        "group_size": 32,
+        "layout": "rowmajor",
+        "packed_activation_dtype": "int32",
+        "packed_weight_dtype": "int32",
+        "route_code": 1,
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-dot-baseline",
+      "materialization": {
+        "commands": [
+          "build_gfx1151_archive_w4a4_rocm10:gfx1151_w4a4_perf"
+        ],
+        "entrypoints": [
+          "torch.ops.gfx1151_w4a4_perf.linear_quantized_rowmajor"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "s4s4_g32_dot_baseline",
+        "linear_quantized_rowmajor",
+        "kRouteDotBaseline"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_forced_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": {
+          "max": null,
+          "min": 1
+        },
+        "activation_dtype": "bfloat16",
+        "automatic_selection": false,
+        "group_size": 32,
+        "layout": "rowmajor",
+        "packed_activation_dtype": "int32",
+        "packed_weight_dtype": "int32",
+        "route_code": 2,
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-wmma-baseline-padded",
+      "materialization": {
+        "commands": [
+          "build_gfx1151_archive_w4a4_rocm10:gfx1151_w4a4_perf"
+        ],
+        "entrypoints": [
+          "torch.ops.gfx1151_w4a4_perf.linear_quantized_rowmajor"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "s4s4_g32_wmma_baseline",
+        "linear_quantized_rowmajor",
+        "kRouteWmmaBaselinePadded"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_forced_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": {
+          "max": 8,
+          "min": 1
+        },
+        "activation_dtype": "bfloat16",
+        "automatic_selection": false,
+        "group_size": 32,
+        "layout": "groupmajor",
+        "packed_activation_dtype": "int32",
+        "packed_weight_dtype": "int32",
+        "route_code": 3,
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-dot-mtile4",
+      "materialization": {
+        "commands": [
+          "build_gfx1151_archive_w4a4_rocm10:gfx1151_w4a4_perf"
+        ],
+        "entrypoints": [
+          "torch.ops.gfx1151_w4a4_perf.linear_quantized_groupmajor"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "s4s4_g32_dot_mtile<4>",
+        "linear_quantized_groupmajor",
+        "kRouteDotMTile4"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_forced_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": {
+          "max": 8,
+          "min": 1
+        },
+        "activation_dtype": "bfloat16",
+        "automatic_selection": false,
+        "group_size": 32,
+        "layout": "groupmajor",
+        "packed_activation_dtype": "int32",
+        "packed_weight_dtype": "int32",
+        "route_code": 4,
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-dot-mtile8",
+      "materialization": {
+        "commands": [
+          "build_gfx1151_archive_w4a4_rocm10:gfx1151_w4a4_perf"
+        ],
+        "entrypoints": [
+          "torch.ops.gfx1151_w4a4_perf.linear_quantized_groupmajor"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "s4s4_g32_dot_mtile<8>",
+        "linear_quantized_groupmajor",
+        "kRouteDotMTile8"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_forced_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": {
+          "max": null,
+          "min": 1
+        },
+        "activation_dtype": "bfloat16",
+        "automatic_selection": false,
+        "group_size": 32,
+        "layout": "groupmajor",
+        "packed_activation_dtype": "int32",
+        "packed_weight_dtype": "int32",
+        "route_code": 5,
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-wmma-16x64",
+      "materialization": {
+        "commands": [
+          "build_gfx1151_archive_w4a4_rocm10:gfx1151_w4a4_perf"
+        ],
+        "entrypoints": [
+          "torch.ops.gfx1151_w4a4_perf.linear_quantized_groupmajor"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "s4s4_g32_wmma_tiled<16, 64>",
+        "linear_quantized_groupmajor",
+        "kRouteWmma16x64"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_forced_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": {
+          "max": null,
+          "min": 1
+        },
+        "activation_dtype": "bfloat16",
+        "automatic_selection": false,
+        "group_size": 32,
+        "layout": "groupmajor",
+        "packed_activation_dtype": "int32",
+        "packed_weight_dtype": "int32",
+        "route_code": 6,
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-wmma-32x64",
+      "materialization": {
+        "commands": [
+          "build_gfx1151_archive_w4a4_rocm10:gfx1151_w4a4_perf"
+        ],
+        "entrypoints": [
+          "torch.ops.gfx1151_w4a4_perf.linear_quantized_groupmajor"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "s4s4_g32_wmma_tiled<32, 64>",
+        "linear_quantized_groupmajor",
+        "kRouteWmma32x64"
+      ]
+    },
+    {
+      "allowed_edit_paths": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip"
+      ],
+      "correctness": {
+        "evidence_state": "source_available_pending_functional_proof",
+        "files": [
+          "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+          "tests/quantization/test_gfx1151_archive_port_contract.py",
+          "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+        ],
+        "oracle": "archive_w4a4_forced_route_oracle",
+        "requires_gpu": true
+      },
+      "domain": {
+        "M": {
+          "max": null,
+          "min": 1
+        },
+        "activation_dtype": "bfloat16",
+        "automatic_selection": false,
+        "group_size": 32,
+        "layout": "groupmajor",
+        "packed_activation_dtype": "int32",
+        "packed_weight_dtype": "int32",
+        "route_code": 7,
+        "wire": "gfx1151-w4a4-g32-v1"
+      },
+      "fallback": "none",
+      "family": "archive_w4a4",
+      "framework": "vllm",
+      "framework_support": {
+        "sglang": "unavailable_vllm_private",
+        "vllm": "native"
+      },
+      "id": "gfx1151-w4a4-wmma-32x32",
+      "materialization": {
+        "commands": [
+          "build_gfx1151_archive_w4a4_rocm10:gfx1151_w4a4_perf"
+        ],
+        "entrypoints": [
+          "torch.ops.gfx1151_w4a4_perf.linear_quantized_groupmajor"
+        ],
+        "kind": "vllm_rocm_extension"
+      },
+      "promotion_authority": false,
+      "role": "linear_kernel",
+      "source_files": [
+        "csrc/quantization/gfx1151_archive_w4a4/gfx1151_w4a4_perf_op.hip",
+        "tests/quantization/test_gfx1151_w4a4_port_manifest.py",
+        "tests/quantization/test_gfx1151_archive_port_contract.py",
+        "tests/quantization/test_gfx1151_archive_trace_integrity.py"
+      ],
+      "source_lineage": "vllm_rocm10",
+      "status": "available",
+      "symbols": [
+        "s4s4_g32_wmma_tiled<32, 32>",
+        "linear_quantized_groupmajor",
+        "kRouteWmma32x32"
+      ]
+    }
+  ]
+}

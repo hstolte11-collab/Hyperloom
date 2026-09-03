@@ -167,11 +167,19 @@ def _resolvable_artifacts_from_done(
     arts = done_payload.get("artifacts_written")
     if not isinstance(arts, list):
         return []
+    from hyperloom.orchestrator.candidate_control import candidate_artifacts_from_done
+
+    strict_candidates = candidate_artifacts_from_done(done_payload, resolve_bases)
+    strict_candidate_ids = {id(entry) for entry in strict_candidates}
     out: list[dict[str, Any]] = []
     # Sandbox bases are invariant across entries — resolve once.
     bases_resolved = [base.resolve() for base in resolve_bases]
     for entry in arts:
         if not isinstance(entry, dict):
+            continue
+        if entry.get("kind") == "gfx1151_candidate_handoff":
+            if id(entry) in strict_candidate_ids:
+                out.append(entry)
             continue
         src = str(entry.get("source") or "").strip()
         tgt = str(entry.get("target") or "").strip()

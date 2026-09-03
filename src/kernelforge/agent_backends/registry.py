@@ -219,6 +219,7 @@ def resolve_agent_runtime(
     provider: str,
     *,
     model: str = "",
+    fallback_model: str | None = None,
     executable: str = "",
     timeout_sec: int = 1800,
     reasoning_effort: str = "high",
@@ -229,19 +230,42 @@ def resolve_agent_runtime(
 ) -> AgentRuntimeConfig:
     """Resolve provider defaults into one complete runtime configuration."""
     registration = get_agent_provider(provider)
-    fallback = normalize_provider_name(fallback_provider) if fallback_provider else ""
+    raw_provider_fallback = (fallback_provider or "").strip().lower()
+    fallback = (
+        ""
+        if raw_provider_fallback in {"", "none", "off"}
+        else normalize_provider_name(raw_provider_fallback)
+    )
     if fallback == registration.name:
         fallback = ""
     if fallback:
         get_agent_provider(fallback)
+    selected_model = model.strip() or registration.default_model
+    model_fallback_enabled = fallback_model is None
+    if fallback_model is None:
+        selected_fallback_model = (
+            registration.fallback_model
+            if selected_model != registration.fallback_model
+            else ""
+        )
+    else:
+        requested_fallback = fallback_model.strip()
+        model_fallback_enabled = requested_fallback.lower() not in {
+            "",
+            "none",
+            "off",
+        }
+        selected_fallback_model = (
+            ""
+            if not model_fallback_enabled
+            else requested_fallback
+        )
+        if selected_fallback_model == selected_model:
+            selected_fallback_model = ""
     return AgentRuntimeConfig(
         provider=registration.name,
-        model=model.strip() or registration.default_model,
-        fallback_model=(
-            registration.fallback_model
-            if (model.strip() or registration.default_model) != registration.fallback_model
-            else ""
-        ),
+        model=selected_model,
+        fallback_model=selected_fallback_model,
         executable=executable.strip(),
         timeout_sec=timeout_sec,
         reasoning_effort=reasoning_effort.strip() or "high",
@@ -249,6 +273,7 @@ def resolve_agent_runtime(
         precheck=precheck,
         fallback_provider=fallback,
         options=dict(options or {}),
+        model_fallback_enabled=model_fallback_enabled,
     )
 
 
@@ -278,7 +303,11 @@ def create_registered_backend(
             runtime,
             provider=fallback_registration.name,
             model=fallback_registration.default_model,
-            fallback_model=fallback_registration.fallback_model,
+            fallback_model=(
+                fallback_registration.fallback_model
+                if runtime.model_fallback_enabled
+                else ""
+            ),
             executable="",
             fallback_provider="",
             options={},
@@ -319,6 +348,8 @@ def _prepare_with_model_fallback(
             usage=usage,
         )
     except AgentProviderUnavailableError as primary_error:
+        if not runtime.model_fallback_enabled:
+            raise
         fallback_model = (runtime.fallback_model or registration.fallback_model).strip()
         if not fallback_model or fallback_model == runtime.model:
             raise
@@ -455,6 +486,20 @@ register_agent_provider(
     )
 )
 
+
+def _create_endpoint_agnostic_backend(runtime: AgentRuntimeConfig) -> AgentBackend:
+    """Construct the endpoint adapter; callers inject its runner explicitly."""
+    from kernelforge.agent_backends.endpoint_agnostic import EndpointAgnosticBackend
+    runner = runtime.options.get("runner")
+    if runner is None:
+        raise AgentProviderUnavailableError("endpoint_agnostic requires an injected runner")
+    return EndpointAgnosticBackend(runtime, runner)
+
+register_agent_provider(AgentProvider(
+    name="endpoint_agnostic", factory=_create_endpoint_agnostic_backend,
+    default_model="endpoint-model",
+    capabilities=AgentCapabilities(writable=True, resumable=True, session_env=True),
+))
 
 __all__ = [
     "AgentProvider",
