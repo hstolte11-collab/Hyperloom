@@ -16,7 +16,19 @@ _AMD_GPU_TYPES = frozenset(AMD_GPU_DISPATCH_IDENTITIES)
 
 #: rocm-smi product tags, reverse-sorted so a longer tag is tested before any
 #: tag that is a prefix of it -- an "MI300XL" must not be claimed by "MI300X".
-_PRODUCT_TAGS: tuple[str, ...] = tuple(sorted((t.upper() for t in _AMD_GPU_TYPES), reverse=True))
+#: Boards whose rocm-smi ``Card Series`` string is not their gpu_type name get
+#: an explicit alias; the alias maps back to the board below.
+_PRODUCT_TAG_ALIASES: dict[str, str] = {
+    # rocm-smi prints "Radeon 8060S Graphics" for the Strix Halo APU.
+    "RADEON 8060S": "radeon8060s",
+}
+_PRODUCT_TAGS: tuple[str, ...] = tuple(
+    sorted(
+        {t.upper() for t in _AMD_GPU_TYPES if t not in _PRODUCT_TAG_ALIASES.values()}
+        | set(_PRODUCT_TAG_ALIASES),
+        reverse=True,
+    )
+)
 
 _GFX_TO_RUNNER: dict[str, str] = {
     # gfx arch -> Magpie runner label, so launchers and runtime materializers
@@ -26,6 +38,7 @@ _GFX_TO_RUNNER: dict[str, str] = {
     # the arch a runner is reached by is a deliberate choice, not an inverse.
     "gfx942": "mi300x",
     "gfx950": "mi355x",
+    "gfx1151": "radeon8060s",
 }
 
 #: Re-exported from ``hyperloom.common`` so provenance and this module cannot
@@ -39,6 +52,26 @@ def _gpu_runner_type(gpu_type: str) -> str:
     if normalized in ("mi325x", "mi308x"):
         return "mi300x"
     return normalized
+
+
+def gpu_type_from_product_text(text: str) -> str | None:
+    """Resolve a board from rocm-smi product text or a ``gcnArchName``.
+
+    The single parser behind local autodetect and the multi-node remote
+    probe, so a board that resolves on this host also resolves on a
+    handed-over cluster. Product tags (longest first) are tried before the
+    arch fallback; aliases map rocm-smi ``Card Series`` names that differ
+    from the gpu_type back to the board.
+    """
+    upper = (text or "").upper()
+    for tag in _PRODUCT_TAGS:
+        if tag in upper:
+            return _PRODUCT_TAG_ALIASES.get(tag, tag.lower())
+    lower = (text or "").lower()
+    for gfx, runner in _GFX_TO_RUNNER.items():
+        if gfx in lower:
+            return runner
+    return None
 
 
 def _resolve_gpu_type(
@@ -68,10 +101,10 @@ def _autodetect_gpu_type() -> str | None:
             capture_output=True,
             text=True,
             timeout=5,
-        ).stdout.upper()
-        for tag in _PRODUCT_TAGS:
-            if tag in out:
-                return tag.lower()
+        ).stdout
+        found = gpu_type_from_product_text(out)
+        if found:
+            return found
     except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError, OSError):
         # rocm-smi missing / slow / not permitted; fall through to the torch
         # gcnArchName probe below (autodetect is best-effort).

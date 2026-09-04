@@ -10,6 +10,11 @@ one table rather than two that drift.
 Note the mapping is many-to-one: MI300X, MI308X and MI325X are all ``gfx942``.
 An arch therefore identifies the ISA, not the board -- which is why the session
 ``--gpu-type`` remains the authority for anything that must tell them apart.
+
+``radeon8060s`` is the Strix Halo APU (RDNA 3.5, ``gfx1151``, 40 CUs). It is a
+consumer/APU board rather than an Instinct part; it shares the ROCm dispatch
+contract but not the Instinct memory hierarchy, so recipe rows keyed by board
+must never be reused across the two families.
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ AMD_GPU_DISPATCH_IDENTITIES: dict[str, tuple[str, int]] = {
     "mi308x": ("gfx942", 304),
     "mi325x": ("gfx942", 304),
     "mi355x": ("gfx950", 256),
+    "radeon8060s": ("gfx1151", 40),
 }
 
 

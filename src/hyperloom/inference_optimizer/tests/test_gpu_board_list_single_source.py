@@ -14,6 +14,7 @@ from __future__ import annotations
 from hyperloom.common.gpu_identity import AMD_GPU_DISPATCH_IDENTITIES
 from hyperloom.inference_optimizer.gpu_types import (
     _AMD_GPU_TYPES,
+    _PRODUCT_TAG_ALIASES,
     _PRODUCT_TAGS,
     amd_gpu_dispatch_identity,
 )
@@ -53,7 +54,19 @@ def test_every_listed_board_actually_resolves():
 
 
 def test_product_tags_cover_the_same_boards():
-    assert set(_PRODUCT_TAGS) == {b.upper() for b in AMD_GPU_DISPATCH_IDENTITIES}
+    """Every board is reachable from rocm-smi by exactly one tag.
+
+    Instinct boards are detected by their own name; a board whose rocm-smi
+    ``Card Series`` string differs from its gpu_type (the Radeon 8060S APU
+    prints ``Radeon 8060S Graphics``) is detected via an alias that maps back
+    to the board. Either way the set of boards the tags resolve to must equal
+    the identities table -- no board silently undetectable, no tag for a board
+    that does not exist.
+    """
+    resolved = {_PRODUCT_TAG_ALIASES.get(tag, tag.lower()) for tag in _PRODUCT_TAGS}
+    assert resolved == set(AMD_GPU_DISPATCH_IDENTITIES)
+    assert len(resolved) == len(_PRODUCT_TAGS), "a board is reachable by two tags"
+    assert set(_PRODUCT_TAG_ALIASES.values()) <= set(AMD_GPU_DISPATCH_IDENTITIES)
 
 
 def test_the_preflight_warning_names_the_boards_the_cli_accepts(capsys, monkeypatch):

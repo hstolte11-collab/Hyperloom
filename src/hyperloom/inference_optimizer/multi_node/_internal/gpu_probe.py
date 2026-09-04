@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ...gpu_types import _AMD_GPU_TYPES, _GFX_TO_RUNNER, _PRODUCT_TAGS
+from ...gpu_types import gpu_type_from_product_text
 from . import ray_dashboard, ssh_client, ssh_known_hosts
 from .external_state import build_external_state_from_env, external_service_url
 
@@ -46,20 +46,11 @@ def _parse_gpu_type(text: str) -> str | None:
         text: Combined stdout/stderr from the remote probe command.
 
     Returns:
-        str | None: ``mi300x`` / ``mi308x`` / ``mi325x`` / ``mi355x`` when a
-        product tag or gfx arch is recognized, else ``None``.
+        str | None: A board from ``AMD_GPU_DISPATCH_IDENTITIES`` when a product
+        tag (or alias) or gfx arch is recognized, else ``None``. Shares the
+        parser with local autodetect so remote and local agree on every board.
     """
-    upper = (text or "").upper()
-    for tag in _PRODUCT_TAGS:
-        if tag in upper:
-            candidate = tag.lower()
-            if candidate in _AMD_GPU_TYPES:
-                return candidate
-    lower = (text or "").lower()
-    for gfx, runner in _GFX_TO_RUNNER.items():
-        if gfx in lower:
-            return runner
-    return None
+    return gpu_type_from_product_text(text)
 
 
 def remote_autodetect_gpu_type(*, timeout_s: int = 60) -> str | None:

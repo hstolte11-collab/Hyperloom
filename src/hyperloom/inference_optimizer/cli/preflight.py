@@ -470,9 +470,31 @@ def _ensure_python_sdks(python_exe: str, pip_extra: list[str]) -> None:
         print(f"Preflight: installed {pip_spec}")
 
 
-_RAY_VERSION = "2.44.1"
+# Defaults match ``agents/kernel/scripts/install.sh``; both honour the same
+# ``RAY_VERSION`` / ``RAY_CLI_CLICK_MAX_VERSION`` overrides so a pinned runtime
+# image that ships a different (compatible) Ray is validated, not downgraded.
+# The values are interpolated into a ``python -c`` program below, so they are
+# accepted only when they are plain dotted versions -- never arbitrary text.
+_VERSION_OVERRIDE_RE = re.compile(r"^[0-9]+(?:\.[0-9]+){0,3}(?:(?:a|b|rc|\.post|\.dev)[0-9]+)?$")
+
+
+def _version_override(env_name: str, default: str) -> str:
+    """Return ``$env_name`` when it is a strict version string, else ``default``.
+
+    A set-but-malformed value is a configuration error, not something to
+    silently fall back from: it raises so the operator sees it.
+    """
+    raw = os.environ.get(env_name, "").strip()
+    if not raw:
+        return default
+    if not _VERSION_OVERRIDE_RE.fullmatch(raw):
+        raise ValueError(f"{env_name}={raw!r} is not a plain version string (e.g. 2.44.1)")
+    return raw
+
+
+_RAY_VERSION = _version_override("RAY_VERSION", "2.44.1")
 # Ray 2.44.1's CLI currently fails during import with click >= 8.3.0.
-_RAY_CLI_CLICK_MAX_VERSION = "8.3.0"
+_RAY_CLI_CLICK_MAX_VERSION = _version_override("RAY_CLI_CLICK_MAX_VERSION", "8.3.0")
 _RAY_INSTALL_SPEC = f"ray[default]=={_RAY_VERSION}"
 _CLICK_INSTALL_SPEC = f"click<{_RAY_CLI_CLICK_MAX_VERSION}"
 _RAY_INSTALL_SPECS = (_RAY_INSTALL_SPEC, _CLICK_INSTALL_SPEC)
