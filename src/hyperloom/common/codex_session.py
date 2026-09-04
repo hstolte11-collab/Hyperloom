@@ -58,6 +58,80 @@ from hyperloom.common.llm_config import LLMConfigError, parse_custom_headers, re
 # matters: the thread's ``model_provider`` refers back to this key.
 CODEX_PROVIDER_NAME = "hyperloom"
 
+# Authentication modes, mirroring ``kernelforge.agent_backends.codex``:
+# ``gateway`` (default) forces a ``model_providers`` override that reads an
+# API key + base URL from the environment; ``native_oauth`` forces no provider
+# and lets the Codex CLI use the ChatGPT-subscription login already stored in
+# a caller-supplied ``CODEX_HOME``.
+CODEX_AUTH_MODES: tuple[str, ...] = ("gateway", "native_oauth")
+
+# Inherited gateway variables would silently select a different transport
+# inside the child; ``native_oauth`` drops KernelForge's Codex-backend scrub
+# set plus ``LLM_GATEWAY_KEY``, which this module's own key fallback accepts.
+_NATIVE_OAUTH_SCRUBBED_ENV: tuple[str, ...] = (
+    "OPENAI_BASE_URL",
+    "OPENAI_API_KEY",
+    "OPENAI_CUSTOM_HEADERS",
+    "CODEX_API_KEY",
+    "LLM_GATEWAY_KEY",
+)
+
+# Operator knobs for the Orchestrator's Codex role. Unset means ``gateway``.
+CODEX_AUTH_MODE_ENV = "INFERENCE_OPTIMIZER_CODEX_AUTH_MODE"
+CODEX_HOME_ENV = "INFERENCE_OPTIMIZER_CODEX_HOME"
+
+
+def resolve_codex_auth_mode(env: Mapping[str, str] | None = None) -> str:
+    """Return the configured Codex auth mode (``gateway`` when unset).
+
+    Single source of truth for credential preflight, backend construction and
+    model resolution so they cannot disagree about which mode is active.
+
+    Raises:
+        CodexSessionUnavailableError: If the value names no known mode.
+    """
+    source = os.environ if env is None else env
+    raw = (source.get(CODEX_AUTH_MODE_ENV) or "").strip().lower()
+    if not raw:
+        return "gateway"
+    if raw not in CODEX_AUTH_MODES:
+        raise CodexSessionUnavailableError(
+            f"{CODEX_AUTH_MODE_ENV}={raw!r} is not one of {' / '.join(CODEX_AUTH_MODES)}"
+        )
+    return raw
+
+
+def native_oauth_codex_home(env: Mapping[str, str] | None = None) -> Path:
+    """Return the validated operator ``CODEX_HOME`` for ``native_oauth``.
+
+    The directory must be absolute, existing, not a symlink, and hold a regular
+    non-symlink ``auth.json`` with no group/other permission bits: that file is
+    the Codex CLI's own subscription login and is the whole credential.
+
+    Raises:
+        CodexSessionUnavailableError: On any missing/unsafe component.
+    """
+    source = os.environ if env is None else env
+    configured = (source.get(CODEX_HOME_ENV) or "").strip()
+    if not configured:
+        raise CodexSessionUnavailableError(
+            f"native_oauth Codex mode requires {CODEX_HOME_ENV} (the directory `codex login` wrote auth.json to)"
+        )
+    home = Path(configured).expanduser()
+    if not home.is_absolute():
+        raise CodexSessionUnavailableError(f"{CODEX_HOME_ENV} must be absolute")
+    if home.is_symlink():
+        raise CodexSessionUnavailableError(f"{CODEX_HOME_ENV} cannot be a symlink")
+    if not home.is_dir():
+        raise CodexSessionUnavailableError(f"{CODEX_HOME_ENV} must already exist as a directory")
+    auth = home / "auth.json"
+    if auth.is_symlink() or not auth.is_file():
+        raise CodexSessionUnavailableError(f"no regular auth.json under {CODEX_HOME_ENV}; run `codex login` first")
+    if auth.stat().st_mode & 0o077:
+        raise CodexSessionUnavailableError(f"{auth} must not be group/other readable (expected mode 0600)")
+    return home.resolve()
+
+
 _CLIENT_NAME = "hyperloom"
 _CLIENT_TITLE = "Hyperloom"
 
@@ -893,6 +967,15 @@ class CodexSession:
         env (dict[str, str] | None): Values overlaid on ``os.environ``. The
             resulting mapping drives policy, credentials, config and child
             process launch.
+        auth_mode (str): One of :data:`CODEX_AUTH_MODES`. ``gateway`` (default)
+            keeps the historical behaviour exactly. ``native_oauth`` mirrors
+            KernelForge's Codex backend: no ``model_providers`` override, the
+            pre-existing ``codex_home`` owns the subscription login, and the
+            gateway variables are removed from the child environment.
+        codex_home (str): Required for ``native_oauth``: an absolute, existing,
+            non-symlink directory holding the Codex CLI's own ``auth.json``.
+            Ignored (must be empty) in ``gateway`` mode, which always uses a
+            private throwaway ``CODEX_HOME``.
     """
 
     def __init__(
@@ -909,6 +992,8 @@ class CodexSession:
         env: dict[str, str] | None = None,
         component: str = "",
         operation: str = "",
+        auth_mode: str = "gateway",
+        codex_home: str = "",
     ) -> None:
         self.cwd = Path(cwd)
         self.model = model
@@ -921,6 +1006,26 @@ class CodexSession:
         self.env = env
         self.component = component
         self.operation = operation
+        self.auth_mode = str(auth_mode).strip().lower()
+        if self.auth_mode not in CODEX_AUTH_MODES:
+            raise CodexSessionUnavailableError(
+                f"unsupported Codex auth_mode {auth_mode!r}; expected one of {' / '.join(CODEX_AUTH_MODES)}"
+            )
+        self.codex_home = ""
+        if self.auth_mode == "native_oauth":
+            configured = str(codex_home).strip()
+            if not configured:
+                raise CodexSessionUnavailableError("native_oauth Codex mode requires a dedicated absolute CODEX_HOME")
+            home_path = Path(configured).expanduser()
+            if not home_path.is_absolute():
+                raise CodexSessionUnavailableError("native_oauth CODEX_HOME must be absolute")
+            if home_path.is_symlink():
+                raise CodexSessionUnavailableError("native_oauth CODEX_HOME cannot be a symlink")
+            if not home_path.is_dir():
+                raise CodexSessionUnavailableError("native_oauth CODEX_HOME must already exist as a directory")
+            self.codex_home = str(home_path.resolve())
+        elif str(codex_home).strip():
+            raise CodexSessionUnavailableError("codex_home is only meaningful with auth_mode='native_oauth'")
         self._stack: contextlib.AsyncExitStack | None = None
         self._sdk: Any | None = None
         self._sandbox: Any = None
@@ -979,36 +1084,46 @@ class CodexSession:
                 "but the capability probe failed; refusing to fall back to bypass"
             )
 
-        provider_config = _resolve_codex_provider_config(
-            api_key_env=self.api_key_env,
-            base_url_env=self.base_url_env,
-            source=effective_env,
-        )
+        # Gateway mode keeps its original order: credentials are resolved (and
+        # can fail) before the SDK is loaded, so which error wins is unchanged.
+        provider_config: CodexProviderConfig | None = None
+        if self.auth_mode == "gateway":
+            provider_config = _resolve_codex_provider_config(
+                api_key_env=self.api_key_env,
+                base_url_env=self.base_url_env,
+                source=effective_env,
+            )
         sdk = load_codex_sdk()
         sandbox = codex_sandbox(
             sdk,
             writable_roots=self.writable_roots,
             sandbox_mode=resolved_sandbox_mode,
         )
-        config_overrides = (
-            "features.memories=false",
-            *provider_config.overrides,
-            *_writable_root_overrides(self.writable_roots),
-        )
-        # The client is entered inside the CODEX_HOME context so unwinding
-        # closes the client first and only then removes the state it writes.
         stack = contextlib.AsyncExitStack()
         try:
-            codex_home = stack.enter_context(
-                _private_codex_home(
-                    cwd=self.cwd,
-                    writable_roots=self.writable_roots,
-                    source=effective_env,
+            if provider_config is None:
+                # native_oauth: the operator's own login is the credential;
+                # nothing is created or removed under their CODEX_HOME.
+                child_env, config_overrides = self._native_oauth_launch(effective_env)
+            else:
+                config_overrides = (
+                    "features.memories=false",
+                    *provider_config.overrides,
+                    *_writable_root_overrides(self.writable_roots),
                 )
-            )
-            child_env = effective_env.copy()
-            child_env.update(provider_config.env_additions)
-            child_env["CODEX_HOME"] = str(codex_home)
+                # The client is entered inside the CODEX_HOME context so
+                # unwinding closes the client first and only then removes the
+                # state it writes.
+                codex_home = stack.enter_context(
+                    _private_codex_home(
+                        cwd=self.cwd,
+                        writable_roots=self.writable_roots,
+                        source=effective_env,
+                    )
+                )
+                child_env = effective_env.copy()
+                child_env.update(provider_config.env_additions)
+                child_env["CODEX_HOME"] = str(codex_home)
             config = sdk.CodexConfig(
                 codex_bin=self.codex_bin or None,
                 config_overrides=config_overrides,
@@ -1033,6 +1148,28 @@ class CodexSession:
         """Drop the open conversation; the next turn opens a fresh thread."""
         self._thread = None
         self._thread_id = ""
+
+    def _native_oauth_launch(self, effective_env: Mapping[str, str]) -> tuple[dict[str, str], tuple[str, ...]]:
+        """Child environment and config overrides for ``auth_mode='native_oauth'``.
+
+        Mirrors ``kernelforge.agent_backends.codex.CodexBackend._child_environment``:
+        the caller's pre-existing ``CODEX_HOME`` owns the subscription login, no
+        ``model_provider`` override is emitted, and the gateway variables are
+        dropped so an inherited API key cannot silently select another
+        transport. Pure function of its input; nothing on disk is touched.
+
+        Returns:
+            The child environment and the ``-c`` config overrides.
+        """
+        child_env = dict(effective_env)
+        for name in _NATIVE_OAUTH_SCRUBBED_ENV:
+            child_env.pop(name, None)
+        child_env["CODEX_HOME"] = self.codex_home
+        overrides = (
+            "features.memories=false",
+            *_writable_root_overrides(self.writable_roots),
+        )
+        return child_env, overrides
 
     async def aclose(self) -> None:
         """Close the SDK client and remove the private state directory.
@@ -1061,14 +1198,20 @@ class CodexSession:
         if self._client is None or self._sdk is None:
             raise CodexSessionError("Codex session is not started; call start() first")
         if self._thread is None:
-            self._thread = await self._client.thread_start(
-                approval_mode=self._sdk.ApprovalMode.deny_all,
-                cwd=str(self.cwd),
-                developer_instructions=self.developer_instructions,
-                model=self.model,
-                model_provider=CODEX_PROVIDER_NAME,
-                sandbox=self._sandbox,
-            )
+            options: dict[str, Any] = {
+                "approval_mode": self._sdk.ApprovalMode.deny_all,
+                "cwd": str(self.cwd),
+                "developer_instructions": self.developer_instructions,
+                "model": self.model,
+                "sandbox": self._sandbox,
+            }
+            # Same rule as KernelForge's ``_thread_start_options``: the gateway
+            # provider is pinned only when its ``model_providers`` config was
+            # emitted. Under ``native_oauth`` there is none; the CLI's own
+            # login-selected provider applies.
+            if self.auth_mode == "gateway":
+                options["model_provider"] = CODEX_PROVIDER_NAME
+            self._thread = await self._client.thread_start(**options)
             self._thread_id = str(getattr(self._thread, "id", "") or "")
         return self._thread
 

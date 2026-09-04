@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import framework_registry
 from hyperloom.common import llm_config
+from hyperloom.common.codex_session import native_oauth_codex_home, resolve_codex_auth_mode
 from hyperloom.common.llm_config import has_anthropic_credential
 from hyperloom.inference_optimizer.session.session_paths import agent_dir
 from hyperloom.orchestrator.roles import (
@@ -181,8 +182,14 @@ def _build_backends(
     # Anthropic-only deploy as two-sided, purely because preflight filled in the
     # endpoint. Only `auto` consults this; an explicit --critic-protocol wins.
     provider_anthropic_only = codex_follows_claude or _official_anthropic_only()
+    codex_auth_mode = resolve_codex_auth_mode()
+    # ``native_oauth`` has no gateway URL to make the deploy read as
+    # OpenAI-only, yet it is exactly that: the Codex CLI login is the only
+    # credential, so the Orchestrator must be the Codex role.
     provider_openai_only = (not codex_follows_claude) and (
-        _official_openai_only() or os.environ.get("INFERENCE_OPTIMIZER_CLAUDE_FOLLOWS_CODEX") == "1"
+        codex_auth_mode == "native_oauth"
+        or _official_openai_only()
+        or os.environ.get("INFERENCE_OPTIMIZER_CLAUDE_FOLLOWS_CODEX") == "1"
     )
 
     if critic_choice == "mock":
@@ -242,6 +249,8 @@ def _build_backends(
             # Scratch only. The session directory itself stays outside the
             # sandbox's writable roots so the agent cannot rewrite session state.
             cwd=agent_dir(session_dir, "orchestration") / "codex_workspace",
+            auth_mode=codex_auth_mode,
+            codex_home=str(native_oauth_codex_home()) if codex_auth_mode == "native_oauth" else "",
         )
     else:
         # Orchestration runs as a persistent ReAct conversation: the Claude

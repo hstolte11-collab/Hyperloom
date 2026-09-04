@@ -17,6 +17,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+from hyperloom.common.codex_session import (
+    _API_KEY_ENV_FALLBACKS,
+    _NATIVE_OAUTH_SCRUBBED_ENV,
+    CODEX_HOME_ENV,
+    CodexSessionUnavailableError,
+    native_oauth_codex_home,
+    resolve_codex_auth_mode,
+)
 from hyperloom.common.llm_config import (
     ANTHROPIC_SYNTHESIZABLE_KEY_ENVS,
     CLAUDE_OAUTH_TOKEN_ENV,
@@ -441,6 +449,64 @@ def _warn_on_oauth_widened_provider_shape() -> None:
     )
 
 
+# Any of these set alongside ``native_oauth`` would make the Codex transport
+# pick a gateway over the operator's login, or drag in the Anthropic side the
+# operator did not configure. Same shape as the Claude-token shadowing checks
+# above, but fatal: there is no sensible "both" for a subscription login.
+# Derived from codex_session's own key-fallback and child-scrub lists so a new
+# gateway credential name accepted there is rejected here automatically.
+_NATIVE_OAUTH_CONFLICTING_ENV: tuple[str, ...] = tuple(
+    dict.fromkeys(
+        (
+            *_API_KEY_ENV_FALLBACKS,
+            *_NATIVE_OAUTH_SCRUBBED_ENV,
+            "ANTHROPIC_API_KEY",
+            "ANTHROPIC_AUTH_TOKEN",
+            "ANTHROPIC_BASE_URL",
+            CLAUDE_OAUTH_TOKEN_ENV,
+        )
+    )
+)
+
+
+def _codex_native_oauth_requested() -> bool:
+    """Validate ``INFERENCE_OPTIMIZER_CODEX_AUTH_MODE=native_oauth``; False when unset.
+
+    On success the operator's ``codex login`` state is the credential and the
+    key/URL checks below do not apply. Any defect (bad mode value, missing or
+    unsafe ``CODEX_HOME``/``auth.json``, coexisting gateway or Anthropic
+    variables) exits 2 with the exact reason, mirroring the existing
+    fail-fast contract of this module.
+    """
+    try:
+        mode = resolve_codex_auth_mode()
+    except CodexSessionUnavailableError as exc:
+        print(f"\nERROR: {exc}", file=sys.stderr)
+        sys.exit(2)
+    if mode != "native_oauth":
+        return False
+    conflicts = [name for name in _NATIVE_OAUTH_CONFLICTING_ENV if os.environ.get(name, "").strip()]
+    if conflicts:
+        print(
+            "\nERROR: INFERENCE_OPTIMIZER_CODEX_AUTH_MODE=native_oauth uses the Codex CLI login as the only "
+            f"credential, but {', '.join(conflicts)} is also set. Unset it, or drop native_oauth to use the key.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    try:
+        home = native_oauth_codex_home()
+    except CodexSessionUnavailableError as exc:
+        print(
+            f"\nERROR: {exc}\n"
+            f"  native_oauth expects {CODEX_HOME_ENV} to point at the directory `codex login` wrote auth.json to\n"
+            "  (by default ~/.codex). Only the Orchestrator's Codex role reads it; nothing is written there.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    print(f"Preflight: Codex native_oauth -- using the CLI login under {home}; no API key or gateway URL required")
+    return True
+
+
 def _validate_credentials() -> None:
     """Fail fast when no usable LLM endpoint/key is configured.
 
@@ -450,7 +516,15 @@ def _validate_credentials() -> None:
     ``ANTHROPIC_AUTH_TOKEN`` / ``CLAUDE_CODE_OAUTH_TOKEN``). Split
     Anthropic/OpenAI entrypoints and single gateways (same key under both
     provider env names) are both accepted.
+
+    ``INFERENCE_OPTIMIZER_CODEX_AUTH_MODE=native_oauth`` is the OpenAI-side
+    counterpart of the Claude subscription token: the Codex CLI's own login
+    under ``INFERENCE_OPTIMIZER_CODEX_HOME`` is the whole credential, so no
+    key or base URL is required -- and none may be set, because an inherited
+    gateway variable would silently switch the Codex transport off the login.
     """
+    if _codex_native_oauth_requested():
+        return
     _reject_cross_provider_pairing()
     _warn_on_shadowed_oauth_token()
     _warn_on_oauth_against_a_foreign_endpoint()

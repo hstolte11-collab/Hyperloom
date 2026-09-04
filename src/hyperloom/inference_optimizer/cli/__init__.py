@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from hyperloom.common import llm_config
+from hyperloom.common.codex_session import resolve_codex_auth_mode
 from hyperloom.common.llm_config import CLAUDE_OAUTH_TOKEN_ENV, parse_custom_headers
 from .executors import (
     _build_specialist_executor,
@@ -989,6 +990,20 @@ def _resolve_models_for_run(
     Raises:
         SystemExit: With code 2 when the Claude gate rejects the model.
     """
+    if resolve_codex_auth_mode() == "native_oauth":
+        # Same situation as the Claude oauth-only path in
+        # _validate_and_resolve_claude_model: the credential is a CLI login, not
+        # a bearer, so the ``GET <base>/models`` catalog probe cannot run and
+        # would only produce a misleading auth failure. The Codex CLI itself
+        # rejects an unknown model on the first turn.
+        chosen = (args.codex_model or "").strip()
+        if not chosen:
+            print("ERROR: --codex-model is empty under native_oauth; pass an explicit model id.", file=sys.stderr)
+            sys.exit(2)
+        args.claude_model = chosen
+        print(f"Preflight: catalog probe skipped: Codex native_oauth login; proceeding with --codex-model={chosen!r}.")
+        return
+
     if claude_follows_codex is None:
         claude_follows_codex = _claude_model_should_follow_codex()
     if codex_follows_claude is None:

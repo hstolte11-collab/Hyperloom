@@ -200,6 +200,9 @@ class CodexBackend:
         retry_policy: Bounded backoff for transient SDK/gateway failures; env
             override via ``INFERENCE_OPTIMIZER_LLM_RETRY_*`` (ATTEMPTS=1
             disables), shared with the Claude path.
+        auth_mode: ``gateway`` (default, unchanged) or ``native_oauth``; passed
+            straight to :class:`CodexSession`, which validates it.
+        codex_home: The operator's existing ``CODEX_HOME`` for ``native_oauth``.
     """
 
     allowed_intents: frozenset[IntentType]
@@ -208,6 +211,8 @@ class CodexBackend:
     writable_roots: tuple[Path, ...] = ()
     sandbox_mode: str = ""
     codex_bin: str = ""
+    auth_mode: str = "gateway"
+    codex_home: str = ""
     # An agent turn carries a tool loop, so it needs the conversational budget
     # the Claude orchestration path also floors at, not a completion's 120s.
     call_timeout_s: float = field(
@@ -469,6 +474,8 @@ class CodexBackend:
                 env=self.env,
                 component="orchestration",
                 operation="orchestrate_turn",
+                auth_mode=self.auth_mode,
+                codex_home=self.codex_home,
             )
             self._thread_seeded = False
             try:
