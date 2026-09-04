@@ -271,13 +271,37 @@ class LlmRcaEngine:
     def _is_configured(self) -> bool:
         """Whether this engine holds everything a call needs.
 
+        A Codex subscription login (``native_oauth``) reaches this process as
+        neither ``base_url`` nor ``api_key`` -- the CLI spends it -- so, as
+        :class:`AnthropicRcaEngine` does for a Claude subscription token, defer
+        to the transport in that mode instead of the key/URL pair.
+
         Returns:
             bool: True when an RCA call can be issued.
         """
+        from hyperloom.common.codex_session import resolve_codex_auth_mode  # local import: keep module import-light
+
+        if resolve_codex_auth_mode() == "native_oauth":
+            return llm_config.codex_transport_ready()
         return bool(self.base_url and self.api_key)
 
     def _new_client(self) -> Any:
-        """Build the OpenAI-compatible client this engine calls through."""
+        """Build the OpenAI-compatible client this engine calls through.
+
+        Under ``native_oauth`` the factory returns the Codex CLI one-shot client;
+        the process env is passed as-is (no key/URL to overlay) and the client is
+        tagged as this component so its spend is attributed like the HTTP path.
+        """
+        from hyperloom.common.codex_session import resolve_codex_auth_mode  # local import: keep module import-light
+
+        if resolve_codex_auth_mode() == "native_oauth":
+            from hyperloom.common.codex_oneshot import CodexOneShotClient  # local import: keep module import-light
+
+            client = llm_config.get_async_openai_client(timeout=_client_timeout(self.timeout_s))
+            if isinstance(client, CodexOneShotClient):
+                client.component = "robustness"
+                client.operation = "analyze_symptom"
+            return client
         return llm_config.get_async_openai_client(
             env=_provider_env(
                 api_key_env="OPENAI_API_KEY",

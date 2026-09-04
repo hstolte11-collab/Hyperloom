@@ -623,6 +623,88 @@ def _openai_sdk_kwargs(
     return kwargs
 
 
+def _codex_native_oauth_client(
+    env: Mapping[str, str] | None,
+    timeout: object | None,
+    *,
+    sync: bool = False,
+) -> object | None:
+    """Return the Codex CLI one-shot client when ``native_oauth`` is selected, else ``None``.
+
+    The OpenAI-side twin of :func:`_one_shot_client` on the Anthropic side: a
+    subscription login cannot authenticate the ``chat.completions`` HTTP path,
+    so every OpenAI-side single-shot caller (critic review, robustness RCA,
+    proposal scorer, framework audit) is transparently served by the Codex CLI
+    instead. Imported late to avoid a cycle (``codex_session`` imports this
+    module). Default (mode unset) returns ``None`` and callers proceed to the
+    unchanged ``openai`` SDK factory.
+    """
+    from .codex_session import native_oauth_codex_home, resolve_codex_auth_mode  # noqa: PLC0415
+
+    if resolve_codex_auth_mode(env) != "native_oauth":
+        return None
+    from .codex_oneshot import CodexOneShotClient, SyncCodexOneShotClient  # noqa: PLC0415
+
+    timeout_s = _timeout_seconds(timeout)
+    kwargs: dict[str, object] = {"codex_home": str(native_oauth_codex_home(env))}
+    if timeout_s is not None:
+        kwargs["timeout_s"] = timeout_s
+    if env is not None:
+        kwargs["env"] = dict(env)
+    factory = SyncCodexOneShotClient if sync else CodexOneShotClient
+    return factory(**kwargs)  # type: ignore[arg-type]
+
+
+def codex_transport_ready(env: Mapping[str, str] | None = None) -> bool:
+    """Whether a single-shot Codex ``native_oauth`` call could actually be issued right now.
+
+    The OpenAI-side twin of :func:`anthropic_transport_ready`: the mode string
+    alone only *selects* the CLI transport, it does not make it usable. Callers
+    that degrade gracefully rather than failing the run (RCA engine, robustness
+    factory) probe with this first, so an accidentally configured or broken
+    native transport is reported as not configured instead of being retried.
+
+    Args:
+        env: Env mapping to read instead of ``os.environ``.
+
+    Returns:
+        True only when ``native_oauth`` is selected, the operator ``CODEX_HOME``
+        and its ``auth.json`` pass validation, and the Codex SDK imports.
+    """
+    from .codex_session import (  # noqa: PLC0415
+        CodexSessionError,
+        load_codex_sdk,
+        native_oauth_codex_home,
+        resolve_codex_auth_mode,
+    )
+
+    try:
+        if resolve_codex_auth_mode(env) != "native_oauth":
+            return False
+        native_oauth_codex_home(env)
+        load_codex_sdk()
+    except CodexSessionError:
+        return False
+    return True
+
+
+def _timeout_seconds(timeout: object | None) -> float | None:
+    """Best-effort wall-clock seconds from an SDK/httpx timeout object.
+
+    ``build_http_timeout`` returns an ``httpx.Timeout``; its ``read`` budget is
+    the closest analogue of a one-shot turn budget. Plain numbers pass through.
+    ``None`` keeps the client default.
+    """
+    if timeout is None:
+        return None
+    if isinstance(timeout, (int, float)):
+        return float(timeout)
+    read = getattr(timeout, "read", None)
+    if isinstance(read, (int, float)):
+        return float(read)
+    return None
+
+
 def get_openai_client(
     *,
     api_key_env: str = "OPENAI_API_KEY",
@@ -650,6 +732,9 @@ def get_openai_client(
         LLMConfigError: If the ``openai`` package is missing, or no OpenAI-side
             API key is configured.
     """
+    native = _codex_native_oauth_client(env, timeout, sync=True)
+    if native is not None:
+        return native
     factory = _openai_sdk_client_class("OpenAI")
     return factory(  # type: ignore[operator]
         **_openai_sdk_kwargs(
@@ -687,6 +772,9 @@ def get_async_openai_client(
         LLMConfigError: If the ``openai`` package is missing, or no OpenAI-side
             API key is configured.
     """
+    native = _codex_native_oauth_client(env, timeout)
+    if native is not None:
+        return native
     factory = _openai_sdk_client_class("AsyncOpenAI")
     return factory(  # type: ignore[operator]
         **_openai_sdk_kwargs(

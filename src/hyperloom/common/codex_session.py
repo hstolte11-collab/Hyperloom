@@ -1303,6 +1303,8 @@ async def run_codex_turn(
     env: dict[str, str] | None = None,
     component: str = "",
     operation: str = "",
+    auth_mode: str = "gateway",
+    codex_home: str = "",
 ) -> CodexSessionResult:
     """Run one non-interactive Codex turn in a session of its own.
 
@@ -1328,6 +1330,9 @@ async def run_codex_turn(
         component (str): Producer label for the turn's calls; ``""`` disables
             attribution tagging.
         operation (str): What the turn is being run to do.
+        auth_mode (str): ``gateway`` (default) or ``native_oauth``; see
+            :class:`CodexSession`.
+        codex_home (str): The operator's ``CODEX_HOME`` for ``native_oauth``.
 
     Returns:
         CodexSessionResult: The normalized turn outcome.
@@ -1354,6 +1359,8 @@ async def run_codex_turn(
         env=env,
         component=component,
         operation=operation,
+        auth_mode=auth_mode,
+        codex_home=codex_home,
     )
     await session.start()
     result: CodexSessionResult | None = None

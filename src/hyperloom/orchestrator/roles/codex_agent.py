@@ -71,6 +71,9 @@ class CodexAgentBackend:
         )
     )
     env: dict[str, str] | None = None
+    # ``gateway`` (default, unchanged) or ``native_oauth``; validated by CodexSession.
+    auth_mode: str = "gateway"
+    codex_home: str = ""
     name: str = "codex-agent"
     calls: list[dict[str, Any]] = field(default_factory=list)
 
@@ -141,6 +144,8 @@ class CodexAgentBackend:
                 env=self.env,
                 component="specialist",
                 operation="run_agent",
+                auth_mode=self.auth_mode,
+                codex_home=self.codex_home,
             )
         except CodexSessionError as exc:
             raise LLMCallFailed(f"Codex Agent SDK specialist turn failed: {redact_secret_values(str(exc))}") from exc

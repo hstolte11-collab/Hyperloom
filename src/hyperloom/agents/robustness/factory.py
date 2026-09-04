@@ -329,6 +329,13 @@ def _llm_credentials_ready(config: Config) -> bool:
     """
     if config.llm_provider == "anthropic":
         return llm_config.anthropic_transport_ready()
+    # OpenAI side: a Codex subscription login (``native_oauth``) reaches this
+    # process as neither base_url nor api_key, exactly like the Claude
+    # subscription token above; the Codex CLI spends it.
+    from hyperloom.common.codex_session import resolve_codex_auth_mode  # local import: keep module import-light
+
+    if resolve_codex_auth_mode() == "native_oauth":
+        return llm_config.codex_transport_ready()
     return bool(config.llm_base_url and config.llm_api_key)
 
 

@@ -103,7 +103,12 @@ def resolve_specialist_agent_backend(env: Mapping[str, str] | None = None) -> st
         :data:`AGENT_BACKEND_CLAUDE`.
     """
     from hyperloom.common import llm_config  # local import: keep module import-light
+    from hyperloom.common.codex_session import resolve_codex_auth_mode  # local import: keep module import-light
 
+    # A Codex subscription login is an OpenAI-only deployment with no gateway
+    # variables to make ``is_openai_only`` true; it must still drive Codex.
+    if resolve_codex_auth_mode(env) == "native_oauth":
+        return AGENT_BACKEND_CODEX
     return AGENT_BACKEND_CODEX if llm_config.is_openai_only(env) else AGENT_BACKEND_CLAUDE
 
 

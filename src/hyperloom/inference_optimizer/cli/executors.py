@@ -182,13 +182,17 @@ def _build_specialist_executor(
             """
             if agent_backend == AGENT_BACKEND_CODEX:
                 from hyperloom.orchestrator.roles.codex_agent import CodexAgentBackend
+                from hyperloom.common.codex_session import native_oauth_codex_home, resolve_codex_auth_mode
 
                 runtime_root = session_dir / "runtime" / "codex-specialist"
+                codex_auth_mode = resolve_codex_auth_mode()
                 return CodexAgentBackend(
                     model=selected_model,
                     cwd=runtime_root,
                     writable_roots=(runtime_root,),
                     call_timeout_s=per_turn_max_seconds,
+                    auth_mode=codex_auth_mode,
+                    codex_home=str(native_oauth_codex_home()) if codex_auth_mode == "native_oauth" else "",
                 )
             from hyperloom.orchestrator.roles.agent_role import SPECIALIST_INTENTS
 

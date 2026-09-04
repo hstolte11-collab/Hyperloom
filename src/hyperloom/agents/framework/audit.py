@@ -407,15 +407,27 @@ def _maybe_llm_refine(
         env_override["OPENAI_BASE_URL"] = req_url
 
     env = {**os.environ, **env_override}
-    try:
-        cfg = _llm_cfg.resolve_openai_client_config(env=env)
-    except _llm_cfg.LLMConfigError:
-        static_result.setdefault("risks", []).append("llm refine skipped: missing OPENAI_API_KEY/OPENAI_BASE_URL")
+    # A usable Codex subscription login (``native_oauth``) carries no key/URL;
+    # the client factory below serves it through the Codex CLI, so the gateway
+    # config pre-check applies only when that transport is not ready. Probing
+    # readiness (not the mode string) keeps this best-effort step degrading to
+    # the static verdict on a broken native transport, as it does on a missing key.
+    from hyperloom.common.codex_session import resolve_codex_auth_mode  # noqa: PLC0415
+
+    if resolve_codex_auth_mode(env) == "native_oauth" and not _llm_cfg.codex_transport_ready(env):
+        static_result.setdefault("risks", []).append("llm refine skipped: Codex native_oauth transport unavailable")
         return static_result
 
-    if not cfg.base_url:
-        static_result.setdefault("risks", []).append("llm refine skipped: missing OPENAI_API_KEY/OPENAI_BASE_URL")
-        return static_result
+    if resolve_codex_auth_mode(env) != "native_oauth":
+        try:
+            cfg = _llm_cfg.resolve_openai_client_config(env=env)
+        except _llm_cfg.LLMConfigError:
+            static_result.setdefault("risks", []).append("llm refine skipped: missing OPENAI_API_KEY/OPENAI_BASE_URL")
+            return static_result
+
+        if not cfg.base_url:
+            static_result.setdefault("risks", []).append("llm refine skipped: missing OPENAI_API_KEY/OPENAI_BASE_URL")
+            return static_result
 
     try:
         client: object = _llm_cfg.get_openai_client(env=env)
