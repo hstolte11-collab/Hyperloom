@@ -6,6 +6,7 @@ Uses ``FakeSDK`` / ``FakeOptions`` from conftest to bypass the real SDK.
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 
 import pytest
 
@@ -347,3 +348,272 @@ async def test_run_one_attempt_log_callback_captures_chunks(tmp_path, fake_sdk, 
     )
     assert any("alpha" in line for line in captured)
     assert any("beta" in line for line in captured)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("profile", [None, "operator-profile"])
+async def test_codex_and_hermes_receive_the_same_original_skill_prompt(tmp_path, monkeypatch, profile):
+    """Provider selection changes transport only, never the Quark workflow prompt."""
+
+    from hyperloom.agents.quantization.driver import runner
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("ORIGINAL_QUARK_SKILL", encoding="utf-8")
+    quark_root = tmp_path / "Quark"
+    quark_root.mkdir()
+    workspace = tmp_path / "workspace"
+    codex_home = tmp_path / "codex-oauth"
+    codex_home.mkdir()
+    calls: list[tuple[list[str], dict]] = []
+
+    monkeypatch.setattr(runner.shutil, "which", lambda name: f"/runtime/{name}")
+    monkeypatch.setattr(runner, "resolve_hermes_executable", lambda: "/runtime/hermes")
+    monkeypatch.setattr(runner, "hermes_external_sandbox_enabled", lambda _env: True)
+    if profile is None:
+        monkeypatch.delenv("HYPERLOOM_HERMES_PROFILE", raising=False)
+    else:
+        monkeypatch.setenv("HYPERLOOM_HERMES_PROFILE", profile)
+    monkeypatch.setenv("HYPERLOOM_HERMES_PROVIDER", "openai-codex")
+    monkeypatch.setenv("HYPERLOOM_HERMES_EXTERNAL_SANDBOX", "1")
+    monkeypatch.setenv("HYPERLOOM_CODEX_HOME", str(codex_home))
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://wrong-gateway.invalid/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-reach-native-codex")
+
+    def _fake_run(argv, **kwargs):
+        calls.append((list(argv), dict(kwargs)))
+        return SimpleNamespace(returncode=0, stdout="provider complete", stderr="")
+
+    monkeypatch.setattr(runner.subprocess, "run", _fake_run)
+
+    codex_result = await run_one_attempt(
+        user_prompt="Quantize SOURCE_MODEL with the original Quark skills",
+        workspace=workspace,
+        quark_root=quark_root,
+        skill_path=skill,
+        model="provider-model",
+        provider="codex",
+    )
+    hermes_result = await run_one_attempt(
+        user_prompt="Quantize SOURCE_MODEL with the original Quark skills",
+        workspace=workspace,
+        quark_root=quark_root,
+        skill_path=skill,
+        model="provider-model",
+        provider="hermes",
+    )
+
+    assert codex_result.sdk_error == hermes_result.sdk_error == ""
+    assert len(calls) == 2
+    codex_argv, codex_kwargs = calls[0]
+    hermes_argv, hermes_kwargs = calls[1]
+    codex_prompt = codex_kwargs["input"]
+    hermes_prompt = hermes_argv[-1]
+    assert codex_prompt == hermes_prompt
+    for marker in (
+        str(skill),
+        str(workspace),
+        str(quark_root),
+        "Quantize SOURCE_MODEL with the original Quark skills",
+    ):
+        assert marker in codex_prompt
+    assert codex_kwargs["cwd"] == hermes_kwargs["cwd"] == workspace
+    assert codex_kwargs["env"]["CODEX_HOME"] == str(codex_home.resolve())
+    assert "OPENAI_BASE_URL" not in codex_kwargs["env"]
+    assert "OPENAI_API_KEY" not in codex_kwargs["env"]
+    assert codex_argv[:3] == [
+        "/runtime/codex",
+        "exec",
+        "--skip-git-repo-check",
+    ]
+    assert codex_argv[codex_argv.index("--sandbox") + 1] == "workspace-write"
+    assert "--dangerously-bypass-approvals-and-sandbox" not in codex_argv
+    assert codex_argv[-2:] == ["-m", "provider-model"]
+    assert hermes_argv[:7] == [
+        "/runtime/hermes",
+        "--profile",
+        profile or "default",
+        "--provider",
+        "openai-codex",
+        "--model",
+        "provider-model",
+    ]
+    assert "--safe-mode" in hermes_argv
+    assert hermes_argv[hermes_argv.index("--toolsets") + 1] == "terminal,file"
+    assert "--yolo" not in hermes_argv
+    assert hermes_argv[-2] == "-z"
+
+
+@pytest.mark.asyncio
+async def test_codex_uses_explicit_external_container_mode_for_plain_workspace(tmp_path, monkeypatch):
+    """The shared double opt-in selects bypass and permits a non-git workspace."""
+
+    from hyperloom.agents.quantization.driver import runner
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("ORIGINAL_QUARK_SKILL", encoding="utf-8")
+    quark_root = tmp_path / "Quark"
+    quark_root.mkdir()
+    workspace = tmp_path / "plain-workspace"
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(runner.shutil, "which", lambda name: f"/runtime/{name}")
+    monkeypatch.setenv("HYPERLOOM_CODEX_SANDBOX_MODE", "bypass")
+    monkeypatch.setenv("HYPERLOOM_CODEX_EXTERNAL_SANDBOX", "1")
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda argv, **_kwargs: (
+            calls.append(list(argv))
+            or SimpleNamespace(returncode=0, stdout="provider complete", stderr="")
+        ),
+    )
+
+    result = await run_one_attempt(
+        user_prompt="Quantize SOURCE_MODEL",
+        workspace=workspace,
+        quark_root=quark_root,
+        skill_path=skill,
+        provider="codex",
+    )
+
+    assert result.sdk_error == ""
+    assert len(calls) == 1
+    argv = calls[0]
+    assert "--dangerously-bypass-approvals-and-sandbox" in argv
+    assert "--sandbox" not in argv
+    assert "--skip-git-repo-check" in argv
+
+
+@pytest.mark.asyncio
+async def test_hermes_invalid_explicit_binary_fails_closed_without_subprocess(tmp_path, monkeypatch):
+    from hyperloom.agents.quantization.driver import runner
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("ORIGINAL_QUARK_SKILL", encoding="utf-8")
+    quark_root = tmp_path / "Quark"
+    quark_root.mkdir()
+    path_bin = tmp_path / "bin"
+    path_bin.mkdir()
+    path_hermes = path_bin / "hermes"
+    path_hermes.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    path_hermes.chmod(0o755)
+    calls: list[list[str]] = []
+
+    monkeypatch.setenv("PATH", str(path_bin))
+    monkeypatch.setenv("HYPERLOOM_HERMES_BIN", str(tmp_path / "missing-hermes"))
+    monkeypatch.setenv("HYPERLOOM_HERMES_EXTERNAL_SANDBOX", "1")
+    monkeypatch.setattr(runner, "hermes_external_sandbox_enabled", lambda _env: True)
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda argv, **_kwargs: (
+            calls.append(list(argv))
+            or SimpleNamespace(returncode=0, stdout="unexpected", stderr="")
+        ),
+    )
+
+    result = await run_one_attempt(
+        user_prompt="Quantize SOURCE_MODEL",
+        workspace=tmp_path / "workspace",
+        quark_root=quark_root,
+        skill_path=skill,
+        provider="hermes",
+    )
+
+    assert result.sdk_error == "hermes executable not found"
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_codex_native_oauth_scrubs_all_shared_gateway_variables(tmp_path, monkeypatch):
+    from hyperloom.agents.quantization.driver import runner
+    from hyperloom.common.codex_session import _NATIVE_OAUTH_SCRUBBED_ENV
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("ORIGINAL_QUARK_SKILL", encoding="utf-8")
+    quark_root = tmp_path / "Quark"
+    quark_root.mkdir()
+    codex_home = tmp_path / "codex-oauth"
+    codex_home.mkdir()
+    child_envs: list[dict[str, str]] = []
+
+    monkeypatch.setattr(runner.shutil, "which", lambda _name: "/runtime/codex")
+    monkeypatch.setenv("HYPERLOOM_CODEX_HOME", str(codex_home))
+    for name in _NATIVE_OAUTH_SCRUBBED_ENV:
+        monkeypatch.setenv(name, f"secret-for-{name}")
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda _argv, **kwargs: (
+            child_envs.append(dict(kwargs["env"]))
+            or SimpleNamespace(returncode=0, stdout="provider complete", stderr="")
+        ),
+    )
+
+    result = await run_one_attempt(
+        user_prompt="Quantize SOURCE_MODEL",
+        workspace=tmp_path / "workspace",
+        quark_root=quark_root,
+        skill_path=skill,
+        provider="codex",
+    )
+
+    assert result.sdk_error == ""
+    assert len(child_envs) == 1
+    assert set(_NATIVE_OAUTH_SCRUBBED_ENV).isdisjoint(child_envs[0])
+
+
+@pytest.mark.asyncio
+async def test_cli_attempt_redacts_provider_diagnostics(tmp_path, monkeypatch):
+    from hyperloom.agents.quantization.driver import runner
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("ORIGINAL_QUARK_SKILL", encoding="utf-8")
+    quark_root = tmp_path / "Quark"
+    quark_root.mkdir()
+    workspace = tmp_path / "workspace"
+    captured: list[str] = []
+    monkeypatch.setattr(runner, "resolve_hermes_executable", lambda: "/runtime/hermes")
+    monkeypatch.setattr(runner, "hermes_external_sandbox_enabled", lambda _env: True)
+    monkeypatch.setenv("PRIVATE_TOKEN", "top-secret-value")
+    monkeypatch.setenv("HYPERLOOM_HERMES_EXTERNAL_SANDBOX", "1")
+
+    def _fake_run(argv, **kwargs):
+        return SimpleNamespace(
+            returncode=2,
+            stdout="",
+            stderr="Authorization: Bearer top-secret-value API_KEY=also-secret",
+        )
+
+    monkeypatch.setattr(runner.subprocess, "run", _fake_run)
+
+    result = await run_one_attempt(
+        user_prompt="Quantize SOURCE_MODEL",
+        workspace=workspace,
+        quark_root=quark_root,
+        skill_path=skill,
+        provider="hermes",
+        log=captured.append,
+    )
+
+    combined = "\n".join([*captured, result.sdk_error])
+    assert "top-secret-value" not in combined
+    assert "also-secret" not in combined
+    assert "[REDACTED]" in combined
+
+
+@pytest.mark.asyncio
+async def test_run_one_attempt_rejects_unknown_provider(tmp_path):
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("x", encoding="utf-8")
+    quark_root = tmp_path / "Quark"
+    quark_root.mkdir()
+
+    with pytest.raises(ValueError, match="unsupported quantization-agent provider"):
+        await run_one_attempt(
+            user_prompt="x",
+            workspace=tmp_path / "workspace",
+            quark_root=quark_root,
+            skill_path=skill,
+            provider="invented-provider",
+        )
