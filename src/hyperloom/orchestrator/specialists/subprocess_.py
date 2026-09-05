@@ -39,7 +39,9 @@ from urllib.parse import urlsplit
 
 from hyperloom.common.codex_session import (
     CodexSessionError,
+    native_oauth_codex_home,
     probe_codex_sandbox_capability,
+    resolve_codex_auth_mode,
     resolve_codex_provider_config,
     resolve_codex_sandbox_mode,
 )
@@ -188,6 +190,13 @@ _SPECIALIST_SECRET_ENV_ALLOWLIST: frozenset[str] = frozenset(
         "OPENAI_API_KEY",
         "OPENAI_CUSTOM_HEADERS",
     }
+)
+_CODEX_NATIVE_OAUTH_SCRUBBED_ENV: tuple[str, ...] = (
+    "OPENAI_BASE_URL",
+    "OPENAI_API_KEY",
+    "OPENAI_CUSTOM_HEADERS",
+    "CODEX_API_KEY",
+    "LLM_GATEWAY_KEY",
 )
 
 _CODEX_MCP_SERVER_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
@@ -434,6 +443,23 @@ def _write_private_codex_config(
     os.replace(temporary, config_path)
     config_path.chmod(0o600)
     return config_path
+
+
+def _codex_config_overrides(lines: list[str]) -> list[str]:
+    """Convert generated Codex TOML sections to equivalent dotted CLI overrides."""
+    section = ""
+    overrides: list[str] = []
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1].strip()
+            continue
+        key, separator, value = line.partition("=")
+        assignment = f"{key.strip()}={value.strip()}" if separator else line
+        overrides.append(f"{section}.{assignment}" if section else assignment)
+    return overrides
 
 
 def _build_specialist_env() -> dict[str, str]:
@@ -912,6 +938,9 @@ class SpecialistSubprocessDispatcher:
         # for compatibility with deployments that authenticate the agent CLI
         # via env; set HYPERLOOM_SPECIALIST_INHERIT_SECRET_ENV=0 to disable.
         env = _build_specialist_env()
+        if resolve_codex_auth_mode() == "native_oauth":
+            for name in _CODEX_NATIVE_OAUTH_SCRUBBED_ENV:
+                env.pop(name, None)
         # Bound the spawned CLI's request transport so a stalled gateway stream
         # raises client-side instead of hanging forever.
         from ..roles._llm_stability_env import apply_llm_stability_env
@@ -963,11 +992,9 @@ class SpecialistSubprocessDispatcher:
                 error=f"specialist agent runtime unavailable (backend={backend or 'unresolved'}): {exc}",
             )
 
-        if backend == AGENT_BACKEND_CODEX:
-            # Per-task CODEX_HOME so concurrent specialists and the operator's
-            # own Codex state stay independent. It lives in the task workspace
-            # rather than a temp dir because Codex refuses to create its helper
-            # binaries under /tmp and would run without its PATH aliases.
+        if backend == AGENT_BACKEND_CODEX and resolve_codex_auth_mode() == "gateway":
+            # Gateway mode uses isolated per-task state; native OAuth retains the
+            # validated operator home supplied by _build_codex_launch.
             codex_home = workspace / ".codex"
             env["CODEX_HOME"] = str(codex_home)
         if gpu_lease is not None:
@@ -1265,11 +1292,14 @@ class SpecialistSubprocessDispatcher:
                 "install `codex` on $PATH, or install the Codex SDK runtime "
                 "(pip install 'hyperloom-inference_optimizer[llm]')"
             )
+        auth_mode = resolve_codex_auth_mode()
         resolver_env = _codex_provider_resolver_overlay(base_env)
-        try:
-            provider_config = resolve_codex_provider_config(env=resolver_env)
-        except CodexSessionError as exc:
-            raise SpecialistAgentUnavailableError(f"codex gateway is not configured: {exc}") from exc
+        provider_config = None
+        if auth_mode == "gateway":
+            try:
+                provider_config = resolve_codex_provider_config(env=resolver_env)
+            except CodexSessionError as exc:
+                raise SpecialistAgentUnavailableError(f"codex gateway is not configured: {exc}") from exc
         try:
             sandbox_mode = resolve_codex_sandbox_mode(env=dict(base_env))
         except CodexSessionError as exc:
@@ -1285,7 +1315,12 @@ class SpecialistSubprocessDispatcher:
                 "sandbox, but the capability probe failed; refusing to fall back to bypass"
             )
 
-        provider_env_additions = dict(provider_config.env_additions)
+        provider_env_additions = dict(provider_config.env_additions) if provider_config is not None else {}
+        if auth_mode == "native_oauth":
+            try:
+                provider_env_additions["CODEX_HOME"] = str(native_oauth_codex_home())
+            except CodexSessionError as exc:
+                raise SpecialistAgentUnavailableError(f"Codex native_oauth is not configured: {exc}") from exc
         child_env_before_mcp = dict(base_env)
         child_env_before_mcp.update(provider_env_additions)
         effective_source = os.environ.copy()
@@ -1299,17 +1334,22 @@ class SpecialistSubprocessDispatcher:
         )
         env_additions = dict(provider_env_additions)
         env_additions.update(mcp_env_additions)
-        codex_home = workspace / ".codex"
-        try:
-            _write_private_codex_config(
-                codex_home=codex_home,
-                developer_instructions=system_prompt,
-                mcp_lines=mcp_lines,
-            )
-        except OSError as exc:
-            raise SpecialistAgentUnavailableError(
-                f"cannot prepare private Codex config under {codex_home}: {exc}"
-            ) from exc
+        config_overrides: list[str] = []
+        if auth_mode == "native_oauth":
+            config_overrides.append(f"developer_instructions={_toml_string(system_prompt)}")
+            config_overrides.extend(_codex_config_overrides(mcp_lines))
+        else:
+            codex_home = workspace / ".codex"
+            try:
+                _write_private_codex_config(
+                    codex_home=codex_home,
+                    developer_instructions=system_prompt,
+                    mcp_lines=mcp_lines,
+                )
+            except OSError as exc:
+                raise SpecialistAgentUnavailableError(
+                    f"cannot prepare private Codex config under {codex_home}: {exc}"
+                ) from exc
 
         writable_dirs = self._writable_dirs(workspace, worktree)
         cmd: list[str] = [
@@ -1319,6 +1359,8 @@ class SpecialistSubprocessDispatcher:
             "--strict-config",
             "--skip-git-repo-check",
         ]
+        if auth_mode == "native_oauth":
+            cmd.append("--ignore-user-config")
         if sandbox_mode == "bypass":
             cmd.append("--dangerously-bypass-approvals-and-sandbox")
         else:
@@ -1329,7 +1371,8 @@ class SpecialistSubprocessDispatcher:
             cmd.extend(["--add-dir", extra_dir])
         # ``features.memories=false`` matches the SDK session: a specialist must
         # not carry state between tasks.
-        for override in ("features.memories=false", *provider_config.overrides):
+        provider_overrides = provider_config.overrides if provider_config is not None else ()
+        for override in ("features.memories=false", *config_overrides, *provider_overrides):
             cmd.extend(["-c", override])
         if cfg.model:
             cmd.extend(["-m", cfg.model])

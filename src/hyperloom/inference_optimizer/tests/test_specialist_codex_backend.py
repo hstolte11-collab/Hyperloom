@@ -22,6 +22,7 @@ import argparse
 import json
 import stat
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -385,6 +386,150 @@ def test_codex_argv_reuses_the_sdk_gateway_overrides(
     # where any user on the host could read it out of ``ps``.
     assert any(o.endswith('env_key="OPENAI_API_KEY"') for o in overrides)
     assert _OPENAI_ONLY_ENV["OPENAI_API_KEY"] not in " ".join(cmd)
+
+
+def test_native_oauth_subprocess_uses_operator_home_without_gateway_or_mutation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Native subprocess auth stays in the operator home while task config is argv-only."""
+    operator_home = tmp_path / "operator-codex"
+    operator_home.mkdir()
+    auth = operator_home / "auth.json"
+    auth.write_text("{}", encoding="utf-8")
+    auth.chmod(0o600)
+    original_files = sorted(path.name for path in operator_home.iterdir())
+    _pin_provider_env(monkeypatch, {})
+    monkeypatch.setenv("INFERENCE_OPTIMIZER_CODEX_AUTH_MODE", "native_oauth")
+    monkeypatch.setenv("INFERENCE_OPTIMIZER_CODEX_HOME", str(operator_home))
+
+    workspace = tmp_path / "workspace"
+    worktree = workspace / "worktree"
+    workspace.mkdir()
+    worktree.mkdir()
+    prompt = workspace / "prompt.md"
+    prompt.write_text("USER_PROMPT_SENTINEL", encoding="utf-8")
+    mcp = tmp_path / "mcp.json"
+    mcp.write_text(
+        json.dumps({"mcpServers": {"intel": {"type": "http", "url": "https://mcp.invalid/rpc"}}}),
+        encoding="utf-8",
+    )
+    dispatcher = SpecialistSubprocessDispatcher(
+        SpecialistSubprocessConfig(
+            agent_backend="codex",
+            codex_executable="/usr/bin/codex",
+            mcp_config_path=str(mcp),
+        )
+    )
+
+    cmd, env_additions = dispatcher._build_codex_launch(
+        prompt_file=prompt,
+        workspace=workspace,
+        worktree=worktree,
+        system_prompt="SYSTEM_INSTRUCTION_SENTINEL",
+        base_env=_build_specialist_env(),
+        probe_sandbox=False,
+    )
+
+    assert env_additions["CODEX_HOME"] == str(operator_home.resolve())
+    assert "--ignore-user-config" in cmd
+    overrides = [cmd[i + 1] for i, value in enumerate(cmd[:-1]) if value == "-c"]
+    assert 'developer_instructions="SYSTEM_INSTRUCTION_SENTINEL"' in overrides
+    assert 'mcp_servers.intel.url="https://mcp.invalid/rpc"' in overrides
+    assert not any(value.startswith(("model_provider=", "model_providers.")) for value in overrides)
+    assert not (workspace / ".codex").exists()
+    assert sorted(path.name for path in operator_home.iterdir()) == original_files
+
+
+@pytest.mark.asyncio
+async def test_native_oauth_dispatch_scrubs_gateway_env_and_preserves_operator_home(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A real dispatcher spawn isolates native OAuth without touching operator state."""
+    gateway_names = (
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "OPENAI_CUSTOM_HEADERS",
+        "CODEX_API_KEY",
+        "LLM_GATEWAY_KEY",
+    )
+    operator_home = tmp_path / "operator-codex"
+    operator_home.mkdir(mode=0o700)
+    auth = operator_home / "auth.json"
+    auth_bytes = b'{"test_fixture":"not-a-credential"}\n'
+    auth.write_bytes(auth_bytes)
+    auth.chmod(0o600)
+    config = operator_home / "config.toml"
+    config.write_text('operator_config_sentinel = "unchanged"\n', encoding="utf-8")
+    config.chmod(0o600)
+
+    def _snapshot_tree(root: Path) -> dict[str, tuple[int, bytes | None]]:
+        return {
+            str(path.relative_to(root)): (
+                stat.S_IMODE(path.lstat().st_mode),
+                path.read_bytes() if path.is_file() else None,
+            )
+            for path in sorted(root.rglob("*"))
+        }
+
+    original_snapshot = _snapshot_tree(operator_home)
+    for name in gateway_names:
+        monkeypatch.setenv(name, f"{name}_PARENT_SENTINEL")
+    monkeypatch.setenv("INFERENCE_OPTIMIZER_CODEX_AUTH_MODE", "native_oauth")
+    monkeypatch.setenv("INFERENCE_OPTIMIZER_CODEX_HOME", str(operator_home))
+    _enable_codex_bypass(monkeypatch)
+
+    capture_path = tmp_path / "fake-codex-capture.json"
+    fake_codex = _write_executable(
+        tmp_path / "bin" / "codex",
+        f"#!{sys.executable}\n"
+        "import json, os, pathlib, sys\n"
+        f"names = {gateway_names!r} + ('CODEX_HOME',)\n"
+        f"capture = pathlib.Path({str(capture_path)!r})\n"
+        "capture.write_text(json.dumps({\n"
+        "    'argv': sys.argv,\n"
+        "    'env': {name: os.environ[name] for name in names if name in os.environ},\n"
+        "    'stdin': sys.stdin.read(),\n"
+        "}), encoding='utf-8')\n"
+        "pathlib.Path('specialist_done.json').write_text(\n"
+        f"    {json.dumps(_DONE_PAYLOAD)!r}, encoding='utf-8'\n"
+        ")\n",
+    )
+    workspace = tmp_path / "workspace"
+    result = await SpecialistSubprocessDispatcher(
+        SpecialistSubprocessConfig(
+            agent_backend=AGENT_BACKEND_CODEX,
+            codex_executable=str(fake_codex),
+            poll_interval_seconds=0.01,
+        )
+    ).run(
+        task_id="native-oauth-dispatch",
+        workspace=workspace,
+        worktree=None,
+        worktree_base=None,
+        system_prompt="NATIVE_OAUTH_SYSTEM_SENTINEL",
+        user_prompt="NATIVE_OAUTH_USER_SENTINEL",
+        disallowed_tools=frozenset(),
+        max_turns=1,
+        wall_budget_sec=10.0,
+    )
+
+    capture = json.loads(capture_path.read_text(encoding="utf-8"))
+    assert result.exit_code == 0
+    assert result.error == ""
+    assert result.done_payload == _DONE_PAYLOAD
+    assert capture["argv"][0] == str(fake_codex)
+    assert capture["stdin"] == "NATIVE_OAUTH_USER_SENTINEL"
+    assert capture["env"] == {"CODEX_HOME": str(operator_home.resolve())}
+    assert "--ignore-user-config" in capture["argv"]
+    overrides = [capture["argv"][i + 1] for i, value in enumerate(capture["argv"][:-1]) if value == "-c"]
+    assert 'developer_instructions="NATIVE_OAUTH_SYSTEM_SENTINEL"' in overrides
+    assert not any(value.startswith(("model_provider=", "model_providers.")) for value in overrides)
+    assert not (workspace / ".codex").exists()
+    assert auth.read_bytes() == auth_bytes
+    assert stat.S_IMODE(auth.stat().st_mode) == 0o600
+    assert _snapshot_tree(operator_home) == original_snapshot
 
 
 def test_codex_argv_uses_workspace_write_sandbox_by_default(

@@ -1477,20 +1477,55 @@ def test_probe_injection_prepends_to_an_existing_pythonpath(tmp_path, monkeypatc
 
     monkeypatch.delenv(evidence.ENABLE_ENV, raising=False)
     monkeypatch.delenv(evidence.DEEP_ENV, raising=False)
+    monkeypatch.setenv("PYTHONPATH", "/image/amd_smi:/image/runtime")
     config = tmp_path / "profile.yaml"
     _write_profile_config(config, {"PYTHONPATH": "/opt/framework/lib", "TP": 8})
 
     probe_dir = ProfileExecutor()._inject_host_probe(config, tmp_path / "ws")
 
     envs = yaml.safe_load(config.read_text(encoding="utf-8"))["benchmark"]["envs"]
-    entries = envs["PYTHONPATH"].split(":")
+    entries = envs["PYTHONPATH"].split(os.pathsep)
     assert entries[0] == str(evidence.probe_asset_dir())
-    assert "/opt/framework/lib" in entries
+    assert entries[1:] == ["/opt/framework/lib", "/image/amd_smi", "/image/runtime"]
     assert envs["TP"] == 8
     assert envs["HYPERLOOM_HOST_PROBE"] == "1"
     assert envs["HYPERLOOM_HOST_PROBE_DIR"] == probe_dir
     assert "HYPERLOOM_HOST_PROBE_DEEP" not in envs
     assert Path(probe_dir).is_dir()
+
+
+def test_probe_injection_preserves_inherited_pythonpath_when_yaml_omits_it(tmp_path, monkeypatch):
+    """Materializing probe env must not discard image runtime-discovery paths."""
+    import yaml
+
+    from hyperloom.orchestrator.actions.executors.profile import ProfileExecutor
+
+    monkeypatch.delenv(evidence.ENABLE_ENV, raising=False)
+    monkeypatch.setenv("PYTHONPATH", "/image/amd_smi:/image/runtime")
+    config = tmp_path / "profile.yaml"
+    _write_profile_config(config, {"TP": 1})
+
+    ProfileExecutor()._inject_host_probe(config, tmp_path / "ws")
+
+    entries = yaml.safe_load(config.read_text(encoding="utf-8"))["benchmark"]["envs"]["PYTHONPATH"].split(os.pathsep)
+    assert entries == [str(evidence.probe_asset_dir()), "/image/amd_smi", "/image/runtime"]
+
+
+def test_probe_injection_deduplicates_explicit_and_inherited_pythonpath(tmp_path, monkeypatch):
+    """Explicit workload paths keep precedence without duplicating image paths."""
+    import yaml
+
+    from hyperloom.orchestrator.actions.executors.profile import ProfileExecutor
+
+    monkeypatch.delenv(evidence.ENABLE_ENV, raising=False)
+    monkeypatch.setenv("PYTHONPATH", "/shared:/image/runtime")
+    config = tmp_path / "profile.yaml"
+    _write_profile_config(config, {"PYTHONPATH": "/workload:/shared"})
+
+    ProfileExecutor()._inject_host_probe(config, tmp_path / "ws")
+
+    entries = yaml.safe_load(config.read_text(encoding="utf-8"))["benchmark"]["envs"]["PYTHONPATH"].split(os.pathsep)
+    assert entries == [str(evidence.probe_asset_dir()), "/workload", "/shared", "/image/runtime"]
 
 
 def test_probe_injection_is_idempotent(tmp_path, monkeypatch):

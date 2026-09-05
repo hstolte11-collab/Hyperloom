@@ -659,8 +659,9 @@ class ProfileExecutor(BaselineExecutor):
         benchmark process's ``PYTHONPATH``, so CPython's ``sitecustomize``
         auto-import installs it without the framework's entrypoint knowing it
         exists. Editing the materialized YAML (rather than passing ``extra_envs``)
-        is what makes the ``PYTHONPATH`` a *prefix*: ``extra_envs`` overrides, and
-        replacing a framework's ``PYTHONPATH`` would break its imports.
+        lets the probe prefix both workload-authored and inherited runtime paths:
+        ``extra_envs`` overrides, and replacing either source of ``PYTHONPATH``
+        would break framework or image-runtime imports.
 
         Args:
             config_path: The materialized profile YAML to edit in place.
@@ -710,10 +711,24 @@ class ProfileExecutor(BaselineExecutor):
         envs = bench.setdefault("envs", {})
         if not isinstance(envs, dict):
             return ""
-        current = str(envs.get("PYTHONPATH", "") or "").strip()
-        entry = str(asset_dir)
-        if entry not in current.split(os.pathsep):
-            envs["PYTHONPATH"] = f"{entry}{os.pathsep}{current}" if current else entry
+        # A YAML PYTHONPATH replaces (rather than augments) the benchmark
+        # process environment.  Keep workload-authored entries ahead of the
+        # image's inherited runtime-discovery entries, but retain both.  In
+        # particular, modular ROCm images expose AMD-SMI via their inherited
+        # PYTHONPATH; emitting only the probe directory makes vLLM platform
+        # discovery fail before model load.  Resolve the inherited value here
+        # from the active runtime instead of baking any image-specific path.
+        entries: list[str] = []
+        for value in (
+            str(asset_dir),
+            str(envs.get("PYTHONPATH", "") or ""),
+            os.environ.get("PYTHONPATH", ""),
+        ):
+            for candidate in value.split(os.pathsep):
+                candidate = candidate.strip()
+                if candidate and candidate not in entries:
+                    entries.append(candidate)
+        envs["PYTHONPATH"] = os.pathsep.join(entries)
         for key, value in probe_env.items():
             envs[key] = value
         try:
