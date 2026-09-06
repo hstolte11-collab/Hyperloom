@@ -73,8 +73,13 @@ COLLECTIVE_KERNEL_BACKEND = "aiter"
 FORGE_SHUTDOWN_GRACE_SEC = 30
 
 
-def _inject_author_gateway_env() -> None:
-    """Seed missing Forge author credentials and Git identity."""
+def _inject_author_gateway_env(agent_backend: str = "claude") -> None:
+    """Prepare the selected author transport and its runtime."""
+    if agent_backend == "codex":
+        from hyperloom.agents.kernel.tools.forge_fusion import _inject_author_gateway_env as prepare_codex
+
+        prepare_codex("codex")
+        return
     openai_base = str(os.environ.get("OPENAI_BASE_URL") or "").strip()
     if openai_base and not os.environ.get("ANTHROPIC_BASE_URL"):
         os.environ["ANTHROPIC_BASE_URL"] = openai_base[:-3] if openai_base.endswith("/v1") else openai_base
@@ -1128,7 +1133,7 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 ),
             )
-            _inject_author_gateway_env()
+            _inject_author_gateway_env(str(prepared_payload.get("agent_backend") or "claude"))
             timed_out: subprocess.TimeoutExpired | None = None
             try:
                 proc = _run_with_tree_timeout(cmd, timeout_sec)

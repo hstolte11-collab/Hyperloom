@@ -370,11 +370,7 @@ def _resolve_backend() -> str:
     """Return ``codex`` or ``claude`` from the configured credentials."""
     from hyperloom.common import llm_config  # noqa: PLC0415
 
-    if llm_config.is_anthropic_only():
-        return "claude"
-    if llm_config.has_openai_side():
-        return "codex"
-    return "claude"
+    return llm_config.resolve_agent_provider(prefer_codex_when_mixed=True)
 
 
 def _within(path: str, root: Path) -> bool:

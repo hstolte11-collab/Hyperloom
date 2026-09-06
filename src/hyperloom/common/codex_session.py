@@ -101,6 +101,31 @@ def resolve_codex_auth_mode(env: Mapping[str, str] | None = None) -> str:
     return raw
 
 
+def resolve_codex_binary(explicit: str = "", env: Mapping[str, str] | None = None) -> str | None:
+    """Validate per-call or deployment runtime selection; None keeps the SDK default.
+
+    Bare command names resolve through the effective PATH. No runtime is launched
+    here; the deployment remains responsible for supplying a complete CLI bundle.
+    """
+    source = os.environ if env is None else env
+    selected = explicit.strip() or (source.get("INFERENCE_OPTIMIZER_CODEX_BIN") or "").strip()
+    if not selected:
+        return None
+    try:
+        path = Path(selected).expanduser()
+        if not path.is_absolute() and len(path.parts) == 1:
+            resolved = shutil.which(str(path), path=source.get("PATH", os.defpath))
+            if not resolved:
+                raise ValueError("command could not be resolved")
+            path = Path(resolved)
+        path = path.resolve(strict=True)
+        if not path.is_file() or not os.access(path, os.X_OK):
+            raise ValueError("not a regular executable file")
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise CodexSessionUnavailableError(f"configured Codex runtime is unavailable: {exc}") from exc
+    return str(path)
+
+
 def native_oauth_codex_home(env: Mapping[str, str] | None = None) -> Path:
     """Return the validated operator ``CODEX_HOME`` for ``native_oauth``.
 
@@ -1060,6 +1085,13 @@ class CodexSession:
         if self._stack is not None:
             return
         effective_env = _effective_env(self.env)
+        # The new deployment override opts into eager closure validation.
+        # Preserve legacy explicit-path construction when it is absent: the SDK
+        # validates that executable at its existing real process-launch boundary.
+        if (effective_env.get("INFERENCE_OPTIMIZER_CODEX_BIN") or "").strip():
+            codex_binary = resolve_codex_binary(self.codex_bin, effective_env)
+        else:
+            codex_binary = self.codex_bin or None
         # Tag before provider resolution so the header is mapped into
         # ``env_http_headers`` with the gateway's own. The session snapshots its
         # environment here, so the tag reflects the phase Codex started in.
@@ -1125,7 +1157,7 @@ class CodexSession:
                 child_env.update(provider_config.env_additions)
                 child_env["CODEX_HOME"] = str(codex_home)
             config = sdk.CodexConfig(
-                codex_bin=self.codex_bin or None,
+                codex_bin=codex_binary,
                 config_overrides=config_overrides,
                 cwd=str(self.cwd),
                 env=child_env,

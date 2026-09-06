@@ -378,6 +378,19 @@ SAFE_ENV_KEYS = (
     # Forge-fusion model overrides (mirrors GEAK_CLAUDE_MODEL for each backend).
     "FORGE_CLAUDE_MODEL",
     "FORGE_CODEX_MODEL",
+    # Preserve the selected native transport and complete runtime bundle across
+    # the worker boundary; paths must refer to mounts shared by the workers.
+    "INFERENCE_OPTIMIZER_CODEX_AUTH_MODE",
+    "INFERENCE_OPTIMIZER_CODEX_HOME",
+    "INFERENCE_OPTIMIZER_CODEX_BIN",
+    "CODEX_MODEL",
+    "FORGE_AGENT_BACKEND",
+    "FORGE_AGENT_CLI",
+    "FORGE_AGENT_MODEL",
+    "FORGE_AGENT_FALLBACK_PROVIDER",
+    "FORGE_AGENT_FALLBACK_MODEL",
+    "FORGE_AGENT_OPTIONS_JSON",
+    "KERNEL_AGENTS_MODEL",
     "GEAK_E2E_TIMEOUT_S",
     # Scoring/profiler/run knobs read by GEAK itself; stripped at the Ray
     # boundary without this allowlist entry.

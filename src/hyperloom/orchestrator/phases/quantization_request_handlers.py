@@ -26,6 +26,8 @@ async def run_quantization_prelude_async(
     prompt: str,
     source_model: str,
     workspace: Path,
+    provider: str = "claude",
+    model: str | None = None,
 ) -> str:
     """Quantize ``source_model`` per ``prompt``; return the exported dir.
 
@@ -37,6 +39,8 @@ async def run_quantization_prelude_async(
         prompt: User-provided quantization instructions (e.g. scheme text).
         source_model: Path to the model to quantize.
         workspace: Working directory; the quantized model is exported under it.
+        provider: Faithful agent adapter selected by the native CLI.
+        model: Explicit model selection for that adapter.
 
     Returns:
         The path to the exported quantized model directory.
@@ -66,6 +70,8 @@ async def run_quantization_prelude_async(
         effective_prompt,
         workspace=workspace,
         interactive=False,
+        provider=provider,
+        model=model,
     )
 
     final = result.assessment.final

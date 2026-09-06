@@ -1715,17 +1715,13 @@ def _ensure_flydsl_aiter_compat(protocol_path: str = "") -> bool:
 
 
 def _openai_only_provider() -> bool:
-    """Return true when the OpenAI side is the only configured provider.
-
-    The forge kernel backend reaches an OpenAI-protocol gateway only through
-    KernelForge's codex provider, so this predicate is what selects it over the
-    claude provider that ``Config.agent_backend='auto'`` would otherwise resolve
-    to. The shape test lives in :mod:`hyperloom.common.llm_config` so that the
-    kernel backend, backend selection and the TraceLens runner cannot disagree.
-    """
+    """Select the Forge Codex transport while preserving an explicit backend."""
     from hyperloom.common import llm_config  # local import: keep module import-light
 
-    return llm_config.is_openai_only()
+    return (
+        llm_config.resolve_agent_provider(requested=(os.environ.get("FORGE_AGENT_BACKEND") or "auto").strip().lower())
+        == "codex"
+    )
 
 
 def _apply_kernel_backend_env(env: dict) -> None:
@@ -1739,6 +1735,12 @@ def _apply_kernel_backend_env(env: dict) -> None:
     ``setdefault`` keeps operator overrides authoritative.
     """
     claude_kernel_backend = not _openai_only_provider()
+    if not claude_kernel_backend:
+        from hyperloom.common.codex_session import resolve_codex_binary
+
+        binary = resolve_codex_binary((env.get("FORGE_AGENT_CLI") or "").strip(), env)
+        if binary:
+            env["FORGE_AGENT_CLI"] = binary
     # bypassPermissions refuses to start under root unless IS_SANDBOX=1.
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         env.setdefault("IS_SANDBOX", "1")

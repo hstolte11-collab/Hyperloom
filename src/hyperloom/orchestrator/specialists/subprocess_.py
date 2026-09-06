@@ -117,20 +117,29 @@ def resolve_specialist_agent_backend(env: Mapping[str, str] | None = None) -> st
 def resolve_codex_executable(explicit: str = "") -> str:
     """Resolve the Codex CLI a specialist subprocess should spawn.
 
-    Order: an explicit path, then ``codex`` on ``$PATH`` (what the runtime
+    Order: an explicit path, then ``INFERENCE_OPTIMIZER_CODEX_BIN``,
+    then ``codex`` on ``$PATH`` (what the runtime
     container installs), then the version-pinned runtime shipped with the Codex
     SDK. The SDK runtime is last so an operator's own installation still wins,
     but present at all so a pod that never ran the npm install can still start a
     specialist.
 
     Args:
-        explicit: Operator-configured path; returned as-is when non-empty.
+        explicit: Operator-configured path. Legacy explicit-only commands stay
+            late-bound to their execution host; with the deployment override
+            configured, validate the selected executable before use.
 
     Returns:
         The resolved executable path, or ``""`` when no Codex runtime exists —
         the caller reports that instead of spawning a name that cannot run.
     """
-    pinned = (explicit or "").strip()
+    from hyperloom.common.codex_session import resolve_codex_binary
+
+    # Preserve the explicit-only contract for commands destined for another
+    # worker filesystem. Local deployment overrides opt into eager validation.
+    if (explicit or "").strip() and not (os.environ.get("INFERENCE_OPTIMIZER_CODEX_BIN") or "").strip():
+        return explicit.strip()
+    pinned = resolve_codex_binary(explicit)
     if pinned:
         return pinned
     on_path = shutil.which(AGENT_BACKEND_CODEX)

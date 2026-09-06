@@ -75,7 +75,7 @@ def _inject_author_gateway_env(agent_backend: str) -> None:
     """Prepare the selected author runtime without crossing provider shapes.
 
     Codex needs none of the Claude-only auth aliases, root sandbox escape, or
-    stability variables, so its environment is left untouched. Claude keeps the
+    stability variables; only its explicit runtime selection is propagated. Claude keeps the
     established behavior: credential alias resolution is delegated to
     :mod:`hyperloom.common.llm_config`, then Claude-specific process defaults are
     applied. Selection is driven only by the explicit backend contract, never by
@@ -83,6 +83,11 @@ def _inject_author_gateway_env(agent_backend: str) -> None:
     deliberately not mirrored into a key var, since either one would disable it.
     """
     if _validated_agent_backend(agent_backend) == "codex":
+        from hyperloom.common.codex_session import resolve_codex_binary
+
+        binary = resolve_codex_binary((os.environ.get("FORGE_AGENT_CLI") or "").strip())
+        if binary:
+            os.environ["FORGE_AGENT_CLI"] = binary
         return
 
     from hyperloom.common import llm_config  # noqa: PLC0415 - standalone import-light

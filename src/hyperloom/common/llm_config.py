@@ -213,6 +213,31 @@ def is_openai_only(env: Mapping[str, str] | None = None) -> bool:
     return has_openai_side(env) and not has_anthropic_side(env)
 
 
+def resolve_agent_provider(
+    env: Mapping[str, str] | None = None,
+    *,
+    requested: str = "auto",
+    prefer_codex_when_mixed: bool = False,
+) -> str:
+    """Select an agent transport, preserving explicit choices and gateway defaults.
+
+    Native OAuth is a configured Codex transport even without endpoint/key
+    variables. Credential-shape predicates deliberately retain their raw meaning.
+    Callers historically preferring OpenAI in mixed deployments opt in explicitly.
+    """
+    if requested in {"claude", "codex"}:
+        return requested
+    if requested != "auto":
+        raise ValueError(f"unsupported agent provider: {requested!r}")
+    from .codex_session import resolve_codex_auth_mode
+
+    if resolve_codex_auth_mode(env) == "native_oauth":
+        return "codex"
+    if has_openai_side(env) and (prefer_codex_when_mixed or not has_anthropic_side(env)):
+        return "codex"
+    return "claude"
+
+
 DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com"
 # The Anthropic Messages API version, defined once for the whole repository.
 # Per-deployment overrides go through ANTHROPIC_CUSTOM_HEADERS, which is merged
@@ -1641,6 +1666,7 @@ __all__ = [
     "has_anthropic_credential",
     "has_anthropic_side",
     "has_openai_side",
+    "resolve_agent_provider",
     "is_anthropic_only",
     "is_openai_only",
     "openai_client_kwargs",

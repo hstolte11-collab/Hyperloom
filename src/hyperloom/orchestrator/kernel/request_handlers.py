@@ -4510,26 +4510,19 @@ def _resolve_forge_agent(
         ValueError: If ``agent_backend`` is not ``"claude"`` or ``"codex"``.
     """
     source = env if env is not None else os.environ
-    openai_only = llm_config.is_openai_only(source)
-    anthropic_only = llm_config.is_anthropic_only(source)
-    has_openai = llm_config.has_openai_side(source)
-    has_anthropic = llm_config.has_anthropic_side(source)
-    if not has_openai and not has_anthropic:
+    from hyperloom.common.codex_session import resolve_codex_auth_mode
+
+    if (
+        resolve_codex_auth_mode(source) != "native_oauth"
+        and not llm_config.has_openai_side(source)
+        and not llm_config.has_anthropic_side(source)
+    ):
         raise RuntimeError("no LLM provider is configured for forge")
 
     explicit_backend = str(payload.get("agent_backend") or "").strip().lower()
     if explicit_backend and explicit_backend not in {"claude", "codex"}:
         raise ValueError(f"agent_backend={payload.get('agent_backend')!r} is invalid; choose 'claude' or 'codex'")
-
-    if explicit_backend:
-        agent_backend = explicit_backend
-    elif openai_only:
-        agent_backend = "codex"
-    elif anthropic_only:
-        agent_backend = "claude"
-    else:
-        # Dual-configured deployments retain this agentic role's Claude default.
-        agent_backend = "claude"
+    agent_backend = llm_config.resolve_agent_provider(source, requested=explicit_backend or "auto")
 
     default_model = DEFAULT_CODEX_MODEL if agent_backend == "codex" else DEFAULT_CLAUDE_MODEL
     llm_model = llm_config.resolve_forge_llm_model(

@@ -126,10 +126,17 @@ async def _run_quantization_prelude(args: argparse.Namespace) -> None:
         run_quantization_prelude_async,
     )
 
+    from hyperloom.common.llm_config import resolve_agent_provider
+
+    provider = resolve_agent_provider()
+    model = getattr(args, f"{provider}_model", None)
+    selection = {"provider": provider, "model": model} if model or provider == "codex" else {}
+
     quantized_model_dir = await run_quantization_prelude_async(
         prompt=prompt,
         source_model=source_model,
         workspace=workspace,
+        **selection,
     )
 
     args.model = Path(quantized_model_dir)
